@@ -29,6 +29,13 @@ class Session:
         """Reset the conversation history to empty."""
         self._history.clear()
 
+    def get_last_assistant_content(self) -> str | None:
+        """Return the content of the most recent assistant turn, or None."""
+        for turn in reversed(self._history):
+            if turn.role == "assistant":
+                return turn.content
+        return None
+
     def replace_with_summary(self, summary: str) -> None:
         """Replace the entire history with a single assistant turn containing the summary."""
         self._history.clear()

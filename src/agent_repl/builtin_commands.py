@@ -1,4 +1,4 @@
-"""Built-in slash commands for agent_repl (/help, /quit, /version)."""
+"""Built-in slash commands for agent_repl (/help, /quit, /version, /copy)."""
 
 from __future__ import annotations
 
@@ -58,10 +58,40 @@ def _handle_version(ctx: CommandContext) -> None:
     ctx.app_context.tui.display_info(f"{app_name} v{version}")
 
 
+def create_copy_command() -> SlashCommand:
+    """Create the /copy command."""
+    return SlashCommand(
+        name="copy",
+        description="Copy last agent output to clipboard",
+        help_text="Copy the most recent agent response (raw markdown) to the system clipboard.",
+        handler=_handle_copy,
+    )
+
+
+def _handle_copy(ctx: CommandContext) -> None:
+    """Copy the last agent output to the system clipboard."""
+    from agent_repl.clipboard import copy_to_clipboard
+    from agent_repl.exceptions import ClipboardError
+
+    text = ctx.app_context.session.get_last_assistant_content()
+    if text is None:
+        ctx.app_context.tui.display_info("No agent output to copy.")
+        return
+
+    try:
+        copy_to_clipboard(text)
+    except ClipboardError as e:
+        ctx.app_context.tui.display_error(str(e))
+        return
+
+    ctx.app_context.tui.display_info("Copied to clipboard.")
+
+
 def get_builtin_commands() -> list[SlashCommand]:
     """Return all built-in commands."""
     return [
         create_help_command(),
         create_quit_command(),
         create_version_command(),
+        create_copy_command(),
     ]

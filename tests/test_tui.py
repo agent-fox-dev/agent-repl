@@ -8,6 +8,7 @@ Validates: Requirements 2.1-2.7, 3.1-3.4, stream_rendering 1-6
 
 
 from io import StringIO
+from unittest.mock import patch
 
 import pytest
 from hypothesis import given, settings
@@ -15,8 +16,10 @@ from hypothesis import strategies as st
 from rich.console import Console
 from rich.text import Text
 
+from agent_repl.exceptions import ClipboardError
+from agent_repl.session import Session
 from agent_repl.tui import TUIShell, _LeftGutter, _rich_color_to_pt_style
-from agent_repl.types import Theme
+from agent_repl.types import ConversationTurn, Theme
 
 
 class TestTUIShell:
@@ -337,3 +340,65 @@ class TestThemedTUI:
         tui.append_stream("text")
         result = tui.finish_stream()
         assert isinstance(result, str)
+
+
+# --- Ctrl+Y copy shortcut tests ---
+
+
+class TestCtrlYBinding:
+    """Tests for Ctrl+Y clipboard copy shortcut."""
+
+    @patch("agent_repl.clipboard.copy_to_clipboard")
+    def test_ctrl_y_copies_last_output(self, mock_clipboard):
+        tui = TUIShell()
+        session = Session()
+        session.add_turn(ConversationTurn(role="assistant", content="# Hello"))
+        tui.set_session(session)
+
+        tui._copy_last_output_to_clipboard()
+
+        mock_clipboard.assert_called_once_with("# Hello")
+
+    @patch("agent_repl.clipboard.copy_to_clipboard")
+    def test_ctrl_y_no_output(self, mock_clipboard):
+        tui = TUIShell()
+        session = Session()
+        tui.set_session(session)
+
+        tui._copy_last_output_to_clipboard()
+
+        mock_clipboard.assert_not_called()
+
+    @patch("agent_repl.clipboard.copy_to_clipboard")
+    def test_ctrl_y_no_session(self, mock_clipboard):
+        tui = TUIShell()
+        # No set_session call
+
+        tui._copy_last_output_to_clipboard()
+
+        mock_clipboard.assert_not_called()
+
+    @patch(
+        "agent_repl.clipboard.copy_to_clipboard",
+        side_effect=ClipboardError("Clipboard utility not found: pbcopy"),
+    )
+    def test_ctrl_y_clipboard_error(self, mock_clipboard):
+        tui = TUIShell()
+        session = Session()
+        session.add_turn(ConversationTurn(role="assistant", content="text"))
+        tui.set_session(session)
+
+        # Should not raise — error is displayed via display_error
+        tui._copy_last_output_to_clipboard()
+
+    def test_key_bindings_created(self):
+        tui = TUIShell()
+        # Verify the key bindings object exists and has at least one binding
+        assert tui._key_bindings is not None
+        assert len(tui._key_bindings.bindings) > 0
+
+    def test_ctrl_y_binding_registered(self):
+        tui = TUIShell()
+        keys = [b.keys for b in tui._key_bindings.bindings]
+        # prompt-toolkit stores keys as tuples
+        assert ("c-y",) in keys

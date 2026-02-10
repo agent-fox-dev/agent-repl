@@ -37,6 +37,8 @@ class App:
         command_registry = CommandRegistry()
         stats = TokenStatistics()
 
+        tui.set_session(session)
+
         app_context = AppContext(
             config=self._config,
             session=session,

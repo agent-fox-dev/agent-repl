@@ -48,6 +48,18 @@ app.run()
 
 See [examples/](examples/) for a full demo (custom plugin, slash-commands, echo agent).
 
+## Built-in commands and shortcuts
+
+| Command / Key | Description |
+|---------------|-------------|
+| `/help` | Show available commands |
+| `/quit` | Exit the REPL |
+| `/version` | Show version |
+| `/copy` | Copy the last agent response (raw markdown) to the system clipboard |
+| `Ctrl+Y` | Same as `/copy` — copy last agent output to clipboard |
+
+Clipboard support requires `pbcopy` (macOS), `xclip` (Linux/X11), or `wl-copy` (Linux/Wayland).
+
 ## Documentation
 
 - [Library API overview](docs/api.md) — public imports and types

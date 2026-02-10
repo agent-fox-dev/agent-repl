@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.key_binding import KeyBindings
 from rich.console import Console, ConsoleOptions, RenderableType, RenderResult
 from rich.live import Live
 from rich.markdown import Markdown
@@ -20,6 +21,9 @@ from rich.style import Style
 from rich.text import Text
 
 from agent_repl.types import Theme
+
+if TYPE_CHECKING:
+    from agent_repl.session import Session
 
 
 def _rich_color_to_pt_style(rich_color: str) -> str:
@@ -64,14 +68,52 @@ class TUIShell:
         self._console = Console()
         self._history = InMemoryHistory()
         self._completer = WordCompleter([], sentence=True)
+        self._app_session: Session | None = None
+        self._key_bindings = self._create_key_bindings()
         self._session: PromptSession[str] = PromptSession(
             history=self._history,
             completer=self._completer,
+            key_bindings=self._key_bindings,
         )
         self._spinner_task: asyncio.Task[Any] | None = None
         self._spinner_running = False
         self._stream_text: Text | None = None
         self._live: Live | None = None
+
+    def set_session(self, session: Session) -> None:
+        """Set the session reference for clipboard operations."""
+        self._app_session = session
+
+    def _create_key_bindings(self) -> KeyBindings:
+        """Create prompt-toolkit key bindings."""
+        kb = KeyBindings()
+
+        @kb.add("c-y")
+        def _copy_last_output(event: Any) -> None:
+            self._copy_last_output_to_clipboard()
+
+        return kb
+
+    def _copy_last_output_to_clipboard(self) -> None:
+        """Copy the last assistant output to the system clipboard."""
+        from agent_repl.clipboard import copy_to_clipboard
+        from agent_repl.exceptions import ClipboardError
+
+        if self._app_session is None:
+            return
+
+        text = self._app_session.get_last_assistant_content()
+        if text is None:
+            self.display_info("No agent output to copy.")
+            return
+
+        try:
+            copy_to_clipboard(text)
+        except ClipboardError as e:
+            self.display_error(str(e))
+            return
+
+        self.display_info("Copied to clipboard.")
 
     async def read_input(self) -> str:
         """Prompt the user for input with history and tab completion."""

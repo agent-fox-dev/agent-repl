@@ -34,6 +34,16 @@ app.run()  # blocking; starts the REPL
 | `AgentPlugin` | Protocol extending `Plugin`: `send_message()`, `compact_history()` |
 | `SlashCommand` | Dataclass: `name`, `description`, `help_text`, `handler` |
 
+## Built-in commands and keyboard shortcuts
+
+| Command / Key | Description |
+|---------------|-------------|
+| `/help` | Show available commands |
+| `/quit` | Exit the REPL |
+| `/version` | Show version |
+| `/copy` | Copy the last agent response (raw markdown) to the system clipboard |
+| `Ctrl+Y` | Same as `/copy` — copy last agent output to clipboard |
+
 ## Stream and session types
 
 | Import | Description |

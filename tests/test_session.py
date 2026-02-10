@@ -85,6 +85,37 @@ _usage_strategy = st.builds(
 )
 
 
+class TestGetLastAssistantContent:
+    def test_empty_history(self):
+        session = Session()
+        assert session.get_last_assistant_content() is None
+
+    def test_user_only_history(self):
+        session = Session()
+        session.add_turn(ConversationTurn(role="user", content="hello"))
+        session.add_turn(ConversationTurn(role="user", content="world"))
+        assert session.get_last_assistant_content() is None
+
+    def test_single_assistant(self):
+        session = Session()
+        session.add_turn(ConversationTurn(role="user", content="q"))
+        session.add_turn(ConversationTurn(role="assistant", content="answer"))
+        assert session.get_last_assistant_content() == "answer"
+
+    def test_multiple_assistants_returns_last(self):
+        session = Session()
+        session.add_turn(ConversationTurn(role="assistant", content="first"))
+        session.add_turn(ConversationTurn(role="user", content="q"))
+        session.add_turn(ConversationTurn(role="assistant", content="second"))
+        assert session.get_last_assistant_content() == "second"
+
+    def test_user_after_assistant(self):
+        session = Session()
+        session.add_turn(ConversationTurn(role="assistant", content="answer"))
+        session.add_turn(ConversationTurn(role="user", content="follow-up"))
+        assert session.get_last_assistant_content() == "answer"
+
+
 class TestProperty4HistoryAccumulation:
     """Property 4: For N turns added, history contains exactly N turns.
 
@@ -161,3 +192,24 @@ class TestProperty11TokenStatisticsMonotonicity:
             assert session.stats.total_output_tokens >= prev_output
             prev_input = session.stats.total_input_tokens
             prev_output = session.stats.total_output_tokens
+
+
+class TestProperty2LastTurnSelection:
+    """Property 2: get_last_assistant_content returns the last assistant turn's content.
+
+    Feature: copy_last_output, Property 2: Last-Turn Selection
+    """
+
+    @settings(max_examples=100)
+    @given(turns=st.lists(_turn_strategy, min_size=1, max_size=20))
+    def test_returns_last_assistant_content(self, turns):
+        session = Session()
+        for turn in turns:
+            session.add_turn(turn)
+
+        expected = None
+        for turn in turns:
+            if turn.role == "assistant":
+                expected = turn.content
+
+        assert session.get_last_assistant_content() == expected

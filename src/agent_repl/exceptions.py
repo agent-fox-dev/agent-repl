@@ -15,3 +15,7 @@ class AgentError(Exception):
 
 class ConfigError(Exception):
     """Raised when configuration loading or validation fails."""
+
+
+class ClipboardError(Exception):
+    """Raised when a clipboard operation fails (missing utility, subprocess error)."""
