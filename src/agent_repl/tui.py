@@ -1,0 +1,165 @@
+"""TUI shell for agent_repl - terminal user interface using rich and prompt_toolkit."""
+
+from __future__ import annotations
+
+import asyncio
+import sys
+from typing import Any
+
+from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.history import InMemoryHistory
+from rich.console import Console, ConsoleOptions, RenderableType, RenderResult
+from rich.live import Live
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.rule import Rule
+from rich.segment import Segment
+from rich.style import Style
+from rich.text import Text
+
+from agent_repl.types import Theme
+
+
+def _rich_color_to_pt_style(rich_color: str) -> str:
+    """Convert a Rich color name to a prompt_toolkit style string."""
+    if not rich_color or rich_color == "default":
+        return ""
+    # Modifiers like "dim" or "bold" have no prompt_toolkit fg equivalent
+    if rich_color in {"dim", "bold", "italic", "underline", "blink", "reverse", "strike"}:
+        return ""
+    # Hex colors pass through
+    if rich_color.startswith("#"):
+        return rich_color
+    # Named colors
+    return f"fg:{rich_color}"
+
+
+class _LeftGutter:
+    """Renders content with a colored left gutter bar."""
+
+    BAR_CHAR = "▎"
+
+    def __init__(self, renderable: RenderableType, style: str) -> None:
+        self.renderable = renderable
+        self.style = style
+
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        inner_options = options.update_width(options.max_width - 2)
+        lines = console.render_lines(self.renderable, inner_options)
+        bar = Segment(self.BAR_CHAR + " ", Style.parse(self.style))
+        new_line = Segment.line()
+        for line in lines:
+            yield bar
+            yield from line
+            yield new_line
+
+
+class TUIShell:
+    """Terminal user interface with rich output and prompt_toolkit input."""
+
+    def __init__(self, theme: Theme | None = None) -> None:
+        self._theme = theme or Theme()
+        self._console = Console()
+        self._history = InMemoryHistory()
+        self._completer = WordCompleter([], sentence=True)
+        self._session: PromptSession[str] = PromptSession(
+            history=self._history,
+            completer=self._completer,
+        )
+        self._spinner_task: asyncio.Task[Any] | None = None
+        self._spinner_running = False
+        self._stream_text: Text | None = None
+        self._live: Live | None = None
+
+    async def read_input(self) -> str:
+        """Prompt the user for input with history and tab completion."""
+        self._console.print(Rule(style=self._theme.prompt_color))
+        pt_style = _rich_color_to_pt_style(self._theme.prompt_color)
+        prompt = FormattedText([(pt_style, "> ")])
+        return await self._session.prompt_async(prompt)
+
+    def display_text(self, text: str) -> None:
+        """Render markdown-formatted text in the output area."""
+        self._console.print(Markdown(text))
+
+    def display_tool_result(self, name: str, content: str, is_error: bool) -> None:
+        """Render a tool result with visual distinction."""
+        style = self._theme.tool_error_color if is_error else self._theme.tool_color
+        title = f"Tool: {name}" + (" (error)" if is_error else "")
+        self._console.print(Panel(content, title=title, border_style=style))
+
+    def display_error(self, message: str) -> None:
+        """Render an error message in red."""
+        self._console.print(f"[bold red]Error:[/bold red] {message}")
+
+    def display_info(self, message: str) -> None:
+        """Render an informational message."""
+        self._console.print(message, style=self._theme.cli_output_color)
+
+    def start_stream(self) -> None:
+        """Begin a live display context for streaming text."""
+        style = self._theme.agent_text_color or None
+        self._stream_text = Text(style=style)
+        gutter = _LeftGutter(self._stream_text, self._theme.agent_gutter_color)
+        self._live = Live(
+            gutter, console=self._console, auto_refresh=True, transient=True
+        )
+        self._live.start()
+
+    def append_stream(self, text: str) -> None:
+        """Append a text fragment to the live display."""
+        if self._live is None or self._stream_text is None:
+            raise RuntimeError("append_stream() called without start_stream()")
+        self._stream_text.append(text)
+        self._live.update(_LeftGutter(self._stream_text, self._theme.agent_gutter_color))
+
+    def finish_stream(self) -> str:
+        """End the live display, render final markdown, return full text."""
+        if self._live is None or self._stream_text is None:
+            raise RuntimeError("finish_stream() called without start_stream()")
+        full_text = self._stream_text.plain
+        self._live.stop()
+        self._live = None
+        self._stream_text = None
+        if full_text:
+            self._console.print(
+                _LeftGutter(Markdown(full_text), self._theme.agent_gutter_color)
+            )
+        return full_text
+
+    def start_spinner(self) -> None:
+        """Start the spinner animation."""
+        if self._spinner_running:
+            return
+        self._spinner_running = True
+        self._spinner_task = asyncio.create_task(self._spin())
+
+    def stop_spinner(self) -> None:
+        """Stop the spinner animation."""
+        self._spinner_running = False
+        if self._spinner_task is not None:
+            self._spinner_task.cancel()
+            self._spinner_task = None
+            # Clear the spinner line
+            sys.stdout.write("\r\033[K")
+            sys.stdout.flush()
+
+    async def _spin(self) -> None:
+        """Internal spinner animation loop."""
+        frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        idx = 0
+        try:
+            while self._spinner_running:
+                sys.stdout.write(f"\r{frames[idx]} Thinking...")
+                sys.stdout.flush()
+                idx = (idx + 1) % len(frames)
+                await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            pass
+
+    def set_completions(self, commands: list[str]) -> None:
+        """Update the tab-completion word list."""
+        self._completer.words = commands
+        self._completer.meta_dict = {}

@@ -1,0 +1,36 @@
+[project]
+name = "agent_repl"
+version = "0.1.0"
+description = "A REPL-style TUI framework for interacting with AI agents"
+requires-python = ">=3.12"
+dependencies = [
+    "rich",
+    "prompt-toolkit",
+    "claude-code-sdk",
+    "httpx",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_repl"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "hypothesis",
+    "ruff",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP"]

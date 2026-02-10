@@ -1,3 +1,15 @@
+# Agent-repl
+.af/
+
+# Environment
+.env
+
+# Other
+.hypothesis/**
+uv.lock
+prompt.md
+hack/**
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
