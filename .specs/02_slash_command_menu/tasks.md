@@ -123,39 +123,36 @@ integration.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 5. TUI and App Integration
-  - [ ] 5.1 Update `TUIShell` to use `SlashCommandCompleter`
+- [x] 5. TUI and App Integration
+  - [x] 5.1 Update `TUIShell` to use `SlashCommandCompleter`
     - Replace `WordCompleter([], sentence=True)` with `SlashCommandCompleter`
     - Add `complete_while_typing=True` to `PromptSession`
-    - Add `set_completer(completer)` method or accept completer in constructor
-    - Remove `set_completions()` method (replaced by completer) or keep for
-      backward compat and delegate to completer's `update_commands()`
+    - Add `set_completer(commands, pinned_names)` method
+    - Remove `set_completions()` method (replaced by `set_completer`)
     - _Requirements: 1.1, 1.3, 4.1, 4.2, 4.3, 5.2_
 
-  - [ ] 5.2 Update `App._run_async` to wire the completer
+  - [x] 5.2 Update `App._run_async` to wire the completer
     - After registering all commands, resolve pinned names:
       - Use `Config.pinned_commands` if provided, else `DEFAULT_PINNED_COMMANDS`
-    - Create `SlashCommandCompleter` with resolved command list and pinned names
-    - Pass completer to TUIShell
-    - Remove old `tui.set_completions(cmd_names)` call (or adapt)
+    - Pass commands and pinned names to `tui.set_completer()`
+    - Replaced old `tui.set_completions(cmd_names)` call
     - _Requirements: 2.2, 5.1_
 
-  - [ ] 5.3 Export `SlashCommandCompleter` from `__init__.py`
-    - Add to `__all__` if appropriate for consumers
+  - [x] 5.3 Export `SlashCommandCompleter` from `__init__.py`
+    - Not added to `__all__` — internal implementation detail, not consumer-facing
     - _Requirements: 5.2_
 
-  - [ ] 5.4 Update existing tests for TUI and App
-    - Update `test_tui.py` tests that reference `WordCompleter` or
-      `set_completions`
-    - Update `test_app.py` if it verifies completer setup
-    - Ensure no regressions in existing test suite
+  - [x] 5.4 Update existing tests for TUI and App
+    - Updated `test_tui.py`: replaced `set_completions` tests with `set_completer` tests
+    - Updated `test_app.py`: updated `test_plugin_commands_registered` assertion
+    - No regressions in existing test suite
     - **Validates: Requirements 4.1, 4.2, 4.3, 5.2**
 
-  - [ ] 5.V Verify task group 5
-    - [ ] All new tests pass: `uv run pytest -q tests/test_tui.py tests/test_app.py`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 1.1, 1.3, 2.2, 4.1, 4.2, 4.3, 5.1, 5.2 acceptance criteria met
+  - [x] 5.V Verify task group 5
+    - [x] All new tests pass: `uv run pytest -q tests/test_tui.py tests/test_app.py`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 1.1, 1.3, 2.2, 4.1, 4.2, 4.3, 5.1, 5.2 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 5 is complete. Do NOT continue to task group 6 in this session. -->
 

@@ -16,23 +16,46 @@ from hypothesis import strategies as st
 from rich.console import Console
 from rich.text import Text
 
+from agent_repl.completer import SlashCommandCompleter
 from agent_repl.exceptions import ClipboardError
 from agent_repl.session import Session
 from agent_repl.tui import TUIShell, _LeftGutter, _rich_color_to_pt_style
-from agent_repl.types import ConversationTurn, Theme
+from agent_repl.types import ConversationTurn, SlashCommand, Theme
+
+
+def _noop(ctx):
+    pass
+
+
+def _make_cmd(name, *, pinned=False):
+    return SlashCommand(
+        name=name, description=f"Desc {name}", help_text="",
+        handler=_noop, pinned=pinned,
+    )
 
 
 class TestTUIShell:
-    def test_set_completions(self):
+    def test_completer_is_slash_command_completer(self):
         tui = TUIShell()
-        tui.set_completions(["/help", "/quit", "/version"])
-        assert list(tui._completer.words) == ["/help", "/quit", "/version"]
+        assert isinstance(tui._completer, SlashCommandCompleter)
 
-    def test_set_completions_updates(self):
+    def test_set_completer_updates_commands(self):
         tui = TUIShell()
-        tui.set_completions(["/help"])
-        tui.set_completions(["/help", "/quit"])
-        assert list(tui._completer.words) == ["/help", "/quit"]
+        cmds = [_make_cmd("help", pinned=True), _make_cmd("quit")]
+        tui.set_completer(cmds, ["help"])
+        assert [c.name for c in tui._completer._commands] == ["help", "quit"]
+
+    def test_set_completer_updates_pinned(self):
+        tui = TUIShell()
+        cmds = [_make_cmd("help"), _make_cmd("quit")]
+        tui.set_completer(cmds, ["help", "quit"])
+        assert tui._completer._pinned_names == ["help", "quit"]
+
+    def test_set_completer_replaces_previous(self):
+        tui = TUIShell()
+        tui.set_completer([_make_cmd("help")], ["help"])
+        tui.set_completer([_make_cmd("quit")], ["quit"])
+        assert [c.name for c in tui._completer._commands] == ["quit"]
 
     def test_display_text_no_crash(self, capsys):
         tui = TUIShell()

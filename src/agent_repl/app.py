@@ -9,6 +9,7 @@ from pathlib import Path
 from agent_repl.builtin_commands import get_builtin_commands
 from agent_repl.command_registry import CommandRegistry
 from agent_repl.config_loader import load_config
+from agent_repl.constants import DEFAULT_PINNED_COMMANDS
 from agent_repl.plugin_loader import load_plugins
 from agent_repl.plugin_registry import PluginRegistry
 from agent_repl.repl import REPLCore
@@ -83,9 +84,13 @@ class App:
             plugin_registry.agent_plugin = agent  # type: ignore[assignment]
             await agent.on_load(app_context)
 
-        # Set up tab completions
-        cmd_names = ["/" + c.name for c in command_registry.all_commands()]
-        tui.set_completions(cmd_names)
+        # Set up slash command completer
+        pinned_names = (
+            self._config.pinned_commands
+            if self._config.pinned_commands is not None
+            else list(DEFAULT_PINNED_COMMANDS)
+        )
+        tui.set_completer(command_registry.all_commands(), pinned_names)
 
         # Start REPL
         repl = REPLCore(app_context, agent=agent)
