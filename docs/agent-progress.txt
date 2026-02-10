@@ -1,0 +1,23 @@
+2026-02-10T12:00:00Z
+Specification: .specs/02_slash_command_menu
+Task: 1 — Data Model Extensions (subtasks 1.1–1.6, 1.V)
+Branch: feature/slash-command-menu-data-model
+
+Completed:
+- Added `pinned: bool = False` field to SlashCommand dataclass
+- Added `pinned_commands: list[str] | None = None` field to Config dataclass
+- Marked built-in /help and /quit commands as pinned=True
+- Added `pinned_commands()` method to CommandRegistry (merge + dedup logic)
+- Added DEFAULT_PINNED_COMMANDS and MAX_PINNED_DISPLAY constants
+- Added 17 new tests (unit + property-based) for all new functionality
+
+Documentation touched:
+- .specs/02_slash_command_menu/tasks.md (checkbox updates)
+
+Verification:
+- 271 tests passed (254 baseline + 17 new), 0 failures
+- ruff check clean on all changed files
+
+Next session:
+- Task group 2: Checkpoint — Data Model Complete
+- Task group 3: Implement SlashCommandCompleter module

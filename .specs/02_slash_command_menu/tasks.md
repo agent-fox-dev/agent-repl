@@ -31,35 +31,35 @@ integration.
 
 ## Tasks
 
-- [ ] 1. Data Model Extensions
-  - [ ] 1.1 Add `pinned` field to `SlashCommand` dataclass
+- [x] 1. Data Model Extensions
+  - [x] 1.1 Add `pinned` field to `SlashCommand` dataclass
     - Add `pinned: bool = False` to `SlashCommand` in `src/agent_repl/types.py`
     - Ensure default value preserves backward compatibility
     - _Requirements: 2.5, 5.3_
 
-  - [ ] 1.2 Add `pinned_commands` field to `Config` dataclass
+  - [x] 1.2 Add `pinned_commands` field to `Config` dataclass
     - Add `pinned_commands: list[str] | None = None` to `Config` in `src/agent_repl/types.py`
     - Default `None` means "use built-in defaults"
     - _Requirements: 2.2, 5.1_
 
-  - [ ] 1.3 Mark built-in commands as pinned
+  - [x] 1.3 Mark built-in commands as pinned
     - Set `pinned=True` on `help` and `quit` commands in `src/agent_repl/builtin_commands.py`
     - _Requirements: 2.3_
 
-  - [ ] 1.4 Add `pinned_commands()` method to `CommandRegistry`
+  - [x] 1.4 Add `pinned_commands()` method to `CommandRegistry`
     - Add method `pinned_commands(self, pinned_names: list[str]) -> list[SlashCommand]`
     - Returns commands matching `pinned_names` in order, then appends any
       commands with `pinned=True` not already included, deduplicates
     - Skip names that are not registered (no error)
     - _Requirements: 2.6_
 
-  - [ ] 1.5 Add `DEFAULT_PINNED_COMMANDS` and `MAX_PINNED_DISPLAY` constants
+  - [x] 1.5 Add `DEFAULT_PINNED_COMMANDS` and `MAX_PINNED_DISPLAY` constants
     - Add to `src/agent_repl/constants.py`:
       - `DEFAULT_PINNED_COMMANDS = ["help", "quit"]`
       - `MAX_PINNED_DISPLAY = 6`
     - _Requirements: 2.3, 2.4, 5.1_
 
-  - [ ] 1.6 Write unit tests for data model extensions
+  - [x] 1.6 Write unit tests for data model extensions
     - Test `SlashCommand` default `pinned=False`
     - Test `Config` default `pinned_commands=None`
     - Test `CommandRegistry.pinned_commands()` ordering, dedup, missing names
@@ -67,11 +67,11 @@ integration.
     - **Property 8: Backward Compatibility Default**
     - **Validates: Requirements 2.2, 2.3, 2.5, 2.6, 5.1, 5.3**
 
-  - [ ] 1.V Verify task group 1
-    - [ ] All new tests pass: `uv run pytest -q tests/test_types.py tests/test_command_registry.py`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 2.2, 2.3, 2.4, 2.5, 2.6, 5.1, 5.3 acceptance criteria met
+  - [x] 1.V Verify task group 1
+    - [x] All new tests pass: `uv run pytest -q tests/test_types.py tests/test_command_registry.py`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 2.2, 2.3, 2.4, 2.5, 2.6, 5.1, 5.3 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 1 is complete. Do NOT continue to task group 2 in this session. -->
 

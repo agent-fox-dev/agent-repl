@@ -28,3 +28,23 @@ class CommandRegistry:
         return sorted(
             name for name in self._commands if name.startswith(prefix)
         )
+
+    def pinned_commands(self, pinned_names: list[str]) -> list[SlashCommand]:
+        """Return pinned commands: first those in pinned_names (in order), then
+        any registered commands with pinned=True not already included."""
+        seen: set[str] = set()
+        result: list[SlashCommand] = []
+
+        for name in pinned_names:
+            if name not in seen:
+                cmd = self._commands.get(name)
+                if cmd is not None:
+                    result.append(cmd)
+                    seen.add(name)
+
+        for cmd in self._commands.values():
+            if cmd.pinned and cmd.name not in seen:
+                result.append(cmd)
+                seen.add(cmd.name)
+
+        return result

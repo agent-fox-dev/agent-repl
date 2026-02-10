@@ -127,6 +127,24 @@ class TestConfig:
         c1.theme.prompt_color = "red"
         assert c2.theme.prompt_color == "green"
 
+    def test_pinned_commands_defaults_to_none(self):
+        config = Config(app_name="test", app_version="1.0", default_model="m")
+        assert config.pinned_commands is None
+
+    def test_pinned_commands_explicit_list(self):
+        config = Config(
+            app_name="test", app_version="1.0", default_model="m",
+            pinned_commands=["help", "quit", "status"],
+        )
+        assert config.pinned_commands == ["help", "quit", "status"]
+
+    def test_pinned_commands_empty_list(self):
+        config = Config(
+            app_name="test", app_version="1.0", default_model="m",
+            pinned_commands=[],
+        )
+        assert config.pinned_commands == []
+
 
 # --- TokenUsage tests ---
 
@@ -196,6 +214,26 @@ class TestSlashCommand:
         assert cmd.description == "Show help"
         assert cmd.help_text == "Displays all available commands"
         assert cmd.handler is handler
+
+    def test_pinned_defaults_to_false(self):
+        cmd = SlashCommand(
+            name="test", description="d", help_text="", handler=lambda ctx: None
+        )
+        assert cmd.pinned is False
+
+    def test_pinned_explicit_true(self):
+        cmd = SlashCommand(
+            name="test", description="d", help_text="", handler=lambda ctx: None,
+            pinned=True,
+        )
+        assert cmd.pinned is True
+
+    def test_backward_compat_without_pinned(self):
+        """Existing code that creates SlashCommand without pinned still works."""
+        cmd = SlashCommand(
+            name="x", description="y", help_text="z", handler=lambda ctx: None
+        )
+        assert cmd.pinned is False
 
 
 # --- StreamEvent tests ---
