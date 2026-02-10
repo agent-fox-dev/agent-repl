@@ -97,10 +97,11 @@ class TestApp:
 
             await app._run_async()
 
-            mock_tui.set_completions.assert_called_once()
-            completions = mock_tui.set_completions.call_args[0][0]
-            assert "/custom" in completions
-            assert "/help" in completions
+            mock_tui.set_completer.assert_called_once()
+            commands = mock_tui.set_completer.call_args[0][0]
+            cmd_names = [c.name for c in commands]
+            assert "custom" in cmd_names
+            assert "help" in cmd_names
 
 
 class TestPackageExports:

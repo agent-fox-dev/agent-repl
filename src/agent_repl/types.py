@@ -34,6 +34,7 @@ class Config:
     agent_factory: Callable[[Config], AgentPlugin] | None = None
     plugins: list[str] = field(default_factory=list)
     theme: Theme = field(default_factory=Theme)
+    pinned_commands: list[str] | None = None
 
 
 # --- Plugin Interface ---
@@ -45,6 +46,7 @@ class SlashCommand:
     description: str
     help_text: str
     handler: Callable[[CommandContext], None]
+    pinned: bool = False
 
 
 class Plugin(Protocol):

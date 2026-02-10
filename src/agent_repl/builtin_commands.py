@@ -14,6 +14,7 @@ def create_help_command() -> SlashCommand:
         description="Show available commands",
         help_text="Display a list of all available slash commands with descriptions.",
         handler=_handle_help,
+        pinned=True,
     )
 
 
@@ -24,6 +25,7 @@ def create_quit_command() -> SlashCommand:
         description="Exit the REPL",
         help_text="Cancel any running agent request and exit the application.",
         handler=_handle_quit,
+        pinned=True,
     )
 
 
