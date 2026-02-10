@@ -23,6 +23,7 @@ class DemoPlugin:
                 description="Display a greeting message",
                 help_text="Shows a greeting including the app name.",
                 handler=self._handle_greet,
+                pinned=True,
             ),
             SlashCommand(
                 name="stats",
