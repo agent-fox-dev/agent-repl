@@ -7,7 +7,6 @@ import sys
 from typing import TYPE_CHECKING, Any
 
 from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.key_binding import KeyBindings
@@ -20,7 +19,8 @@ from rich.segment import Segment
 from rich.style import Style
 from rich.text import Text
 
-from agent_repl.types import Theme
+from agent_repl.completer import SlashCommandCompleter
+from agent_repl.types import SlashCommand, Theme
 
 if TYPE_CHECKING:
     from agent_repl.session import Session
@@ -67,12 +67,13 @@ class TUIShell:
         self._theme = theme or Theme()
         self._console = Console()
         self._history = InMemoryHistory()
-        self._completer = WordCompleter([], sentence=True)
+        self._completer: SlashCommandCompleter = SlashCommandCompleter([], [])
         self._app_session: Session | None = None
         self._key_bindings = self._create_key_bindings()
         self._session: PromptSession[str] = PromptSession(
             history=self._history,
             completer=self._completer,
+            complete_while_typing=True,
             key_bindings=self._key_bindings,
         )
         self._spinner_task: asyncio.Task[Any] | None = None
@@ -201,7 +202,10 @@ class TUIShell:
         except asyncio.CancelledError:
             pass
 
-    def set_completions(self, commands: list[str]) -> None:
-        """Update the tab-completion word list."""
-        self._completer.words = commands
-        self._completer.meta_dict = {}
+    def set_completer(
+        self,
+        commands: list[SlashCommand],
+        pinned_names: list[str],
+    ) -> None:
+        """Update the slash command completer with current commands."""
+        self._completer.update_commands(commands, pinned_names)

@@ -48,3 +48,28 @@ Verification:
 Next session:
 - Task group 4: Checkpoint — Completer Module Complete
 - Task group 5: TUI and App Integration
+
+---
+
+2026-02-10T14:00:00Z
+Specification: .specs/02_slash_command_menu
+Task: 5 — TUI and App Integration (subtasks 5.1–5.4, 5.V)
+Branch: feature/slash-command-tui-integration
+
+Completed:
+- Replaced WordCompleter with SlashCommandCompleter in TUIShell
+- Added complete_while_typing=True to PromptSession
+- Replaced set_completions() with set_completer(commands, pinned_names)
+- Updated App._run_async to resolve pinned names from Config and wire completer
+- Updated test_tui.py and test_app.py for new completer API
+- SlashCommandCompleter not exported in __init__.py (internal detail)
+
+Documentation touched:
+- .specs/02_slash_command_menu/tasks.md (checkbox updates)
+
+Verification:
+- 301 tests passed (299 baseline + 2 new), 0 failures
+- ruff check clean on all changed files
+
+Next session:
+- Task group 6: Final Verification (manual smoke test)
