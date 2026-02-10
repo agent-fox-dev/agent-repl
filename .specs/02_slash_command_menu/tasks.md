@@ -172,6 +172,42 @@ integration.
 
 <!-- SESSION BOUNDARY -->
 
+- [ ] 7. ESC Dismiss Fix
+  - [ ] 7.1 Add suppression mechanism to `SlashCommandCompleter`
+    - Add `_suppressed: bool = False` and `_suppressed_text: str = ""` fields
+    - Add `suppress()` method that sets `_suppressed = True` and stores current text
+    - In `get_completions()`, check `_suppressed`: if text unchanged yield nothing,
+      if text changed clear the flag and proceed normally
+    - _Requirements: 4.1, 4.2_
+
+  - [ ] 7.2 Add ESC key binding in `TUIShell._create_key_bindings()`
+    - Import `has_completions` filter from `prompt_toolkit.filters`
+    - Bind `"escape"` with `filter=has_completions` to:
+      1. Set `event.current_buffer.complete_state = None`
+      2. Call `self._completer.suppress()`
+    - _Requirements: 4.1_
+
+  - [ ] 7.3 Write tests for ESC dismiss behavior
+    - Test: `suppress()` causes `get_completions()` to yield nothing
+    - Test: after suppression, changing text re-enables completions
+    - Test: suppression only applies while text is unchanged
+    - Test: ESC key binding is registered with `has_completions` filter
+    - **Property 9: ESC Suppression**
+    - **Validates: Requirements 4.1, 4.2**
+
+  - [ ] 7.V Verify task group 7
+    - [ ] All new tests pass: `uv run pytest -q tests/test_completer.py tests/test_tui.py`
+    - [ ] All existing tests still pass: `uv run pytest tests/`
+    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [ ] Requirements 4.1, 4.2 acceptance criteria met
+
+<!-- SESSION BOUNDARY: Task group 7 is complete. Do NOT continue to task group 8 in this session. -->
+
+- [ ] 8. Checkpoint - ESC Dismiss Complete
+  - Ensure all tests pass, ask the user if questions arise.
+
+<!-- SESSION BOUNDARY -->
+
 ### Checkbox States
 
 | Syntax   | Meaning                |
@@ -207,8 +243,8 @@ Tasks are **required by default**. Mark optional tasks with `*` after checkbox: 
 | 3.2 Real-time filter update | 3.1 | 3.2 |
 | 3.3 Empty results for no match | 3.1 | 3.2 |
 | 3.4 Revert to pinned on backspace | 3.1 | 3.2 (Property 3) |
-| 4.1 Escape dismisses menu | 5.1 | 5.4 |
-| 4.2 No re-display until input change | 5.1 | 5.4 |
+| 4.1 Escape dismisses menu | 7.1, 7.2 | 7.3 (Property 9) |
+| 4.2 No re-display until input change | 7.1 | 7.3 (Property 9) |
 | 4.3 Selection inserts command | 5.1 | 5.4 |
 | 5.1 Default pinned when not configured | 1.2, 1.5 | 1.6 (Property 8) |
 | 5.2 Preserve non-slash completion | 5.1 | 5.4 |
@@ -216,9 +252,12 @@ Tasks are **required by default**. Mark optional tasks with `*` after checkbox: 
 
 ## Notes
 
-- **Escape handling**: prompt-toolkit natively dismisses the completion menu on
-  Escape. No custom key binding is needed. The completer just needs to work
-  correctly with `complete_while_typing=True`.
+- **Escape handling**: prompt-toolkit does NOT natively bind ESC to dismiss
+  completions (Emacs mode uses Ctrl+G, Vi mode uses Ctrl+E). A custom ESC key
+  binding is required (task group 7). Additionally, `complete_while_typing`
+  re-triggers completions immediately after cancellation, so the completer
+  needs a suppression flag to prevent this (see design doc "ESC Dismiss
+  Mechanism").
 - **Tab behavior**: With the new completer, Tab will accept the selected
   completion (prompt-toolkit default). This replaces the old `WordCompleter`
   tab-completion behavior.
