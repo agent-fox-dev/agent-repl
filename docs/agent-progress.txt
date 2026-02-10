@@ -73,3 +73,24 @@ Verification:
 
 Next session:
 - Task group 6: Final Verification (manual smoke test)
+
+---
+
+2026-02-10T15:00:00Z
+Specification: .specs/02_slash_command_menu
+Task: 6 — Final Verification (subtasks 6.1, 6.2)
+Branch: feature/slash-command-final-verification
+
+Completed:
+- Programmatic end-to-end integration test: all 10 checks passed
+  - Pinned commands show on "/", type-ahead filtering works,
+    non-slash yields nothing, custom Config.pinned_commands respected,
+    display format correct
+- Full test suite: 301 passed, 0 failures
+- Linter: clean on all spec-02 files
+
+Documentation touched:
+- .specs/02_slash_command_menu/tasks.md (final checkbox updates)
+
+SPEC 02_SLASH_COMMAND_MENU: COMPLETE
+All 6 task groups finished. Feature is ready for use.
