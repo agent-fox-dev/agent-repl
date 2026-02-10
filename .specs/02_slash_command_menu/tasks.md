@@ -172,22 +172,22 @@ integration.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 7. ESC Dismiss Fix
-  - [ ] 7.1 Add suppression mechanism to `SlashCommandCompleter`
+- [x] 7. ESC Dismiss Fix
+  - [x] 7.1 Add suppression mechanism to `SlashCommandCompleter`
     - Add `_suppressed: bool = False` and `_suppressed_text: str = ""` fields
     - Add `suppress()` method that sets `_suppressed = True` and stores current text
     - In `get_completions()`, check `_suppressed`: if text unchanged yield nothing,
       if text changed clear the flag and proceed normally
     - _Requirements: 4.1, 4.2_
 
-  - [ ] 7.2 Add ESC key binding in `TUIShell._create_key_bindings()`
+  - [x] 7.2 Add ESC key binding in `TUIShell._create_key_bindings()`
     - Import `has_completions` filter from `prompt_toolkit.filters`
     - Bind `"escape"` with `filter=has_completions` to:
       1. Set `event.current_buffer.complete_state = None`
       2. Call `self._completer.suppress()`
     - _Requirements: 4.1_
 
-  - [ ] 7.3 Write tests for ESC dismiss behavior
+  - [x] 7.3 Write tests for ESC dismiss behavior
     - Test: `suppress()` causes `get_completions()` to yield nothing
     - Test: after suppression, changing text re-enables completions
     - Test: suppression only applies while text is unchanged
@@ -195,11 +195,11 @@ integration.
     - **Property 9: ESC Suppression**
     - **Validates: Requirements 4.1, 4.2**
 
-  - [ ] 7.V Verify task group 7
-    - [ ] All new tests pass: `uv run pytest -q tests/test_completer.py tests/test_tui.py`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 4.1, 4.2 acceptance criteria met
+  - [x] 7.V Verify task group 7
+    - [x] All new tests pass: `uv run pytest -q tests/test_completer.py tests/test_tui.py`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 4.1, 4.2 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 7 is complete. Do NOT continue to task group 8 in this session. -->
 

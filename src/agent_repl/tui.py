@@ -7,6 +7,7 @@ import sys
 from typing import TYPE_CHECKING, Any
 
 from prompt_toolkit import PromptSession
+from prompt_toolkit.filters import has_completions
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.key_binding import KeyBindings
@@ -92,6 +93,11 @@ class TUIShell:
         @kb.add("c-y")
         def _copy_last_output(event: Any) -> None:
             self._copy_last_output_to_clipboard()
+
+        @kb.add("escape", filter=has_completions)
+        def _dismiss_completions(event: Any) -> None:
+            event.current_buffer.complete_state = None
+            self._completer.suppress(event.current_buffer.text)
 
         return kb
 
