@@ -29,6 +29,8 @@ class SlashCommandCompleter(Completer):
         self._commands: list[SlashCommand] = list(commands)
         self._pinned_names: list[str] = list(pinned_names)
         self._max_pinned_display = max_pinned_display
+        self._suppressed = False
+        self._suppressed_text = ""
 
     def update_commands(
         self,
@@ -39,6 +41,11 @@ class SlashCommandCompleter(Completer):
         self._commands = list(commands)
         self._pinned_names = list(pinned_names)
 
+    def suppress(self, text: str) -> None:
+        """Suppress completions until the input text changes."""
+        self._suppressed = True
+        self._suppressed_text = text
+
     def get_completions(
         self,
         document: Document,
@@ -46,6 +53,12 @@ class SlashCommandCompleter(Completer):
     ) -> Iterable[Completion]:
         """Yield completions for the current input state."""
         text = document.text_before_cursor
+
+        # If suppressed by ESC, yield nothing until the text changes
+        if self._suppressed:
+            if text == self._suppressed_text:
+                return
+            self._suppressed = False
 
         # Only activate when '/' is the very first character
         if not text.startswith("/"):

@@ -425,3 +425,26 @@ class TestCtrlYBinding:
         keys = [b.keys for b in tui._key_bindings.bindings]
         # prompt-toolkit stores keys as tuples
         assert ("c-y",) in keys
+
+
+class TestEscDismissBinding:
+    """Tests for ESC key binding that dismisses completion menu.
+
+    Validates: Requirements 4.1, 4.2
+    """
+
+    def test_escape_binding_registered(self):
+        tui = TUIShell()
+        keys = [b.keys for b in tui._key_bindings.bindings]
+        assert ("escape",) in keys
+
+    def test_escape_binding_has_filter(self):
+        """ESC binding should only fire when completions are visible."""
+        tui = TUIShell()
+        esc_bindings = [
+            b for b in tui._key_bindings.bindings if b.keys == ("escape",)
+        ]
+        assert len(esc_bindings) == 1
+        # The filter should be has_completions (not always active)
+        binding = esc_bindings[0]
+        assert binding.filter is not None

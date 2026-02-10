@@ -6,7 +6,8 @@ Property 3: Empty Prefix Reversion
 Property 4: Non-Slash Inactivity
 Property 6: Display Format Correctness
 Property 7: Pinned Cap Enforcement
-Validates: Requirements 1.1, 1.2, 1.3, 1.4, 2.1, 2.4, 3.1, 3.2, 3.3, 3.4
+Property 9: ESC Suppression
+Validates: Requirements 1.1, 1.2, 1.3, 1.4, 2.1, 2.4, 3.1, 3.2, 3.3, 3.4, 4.1, 4.2
 """
 
 from __future__ import annotations
@@ -375,3 +376,119 @@ class TestProperty7PinnedCapEnforcement:
         completer = SlashCommandCompleter(cmds, [], max_pinned_display=6)
         results = _completions(completer, "/")
         assert len(results) <= 6
+
+
+# ---------------------------------------------------------------------------
+# ESC Suppression tests (Property 9)
+# Validates: Requirements 4.1, 4.2
+# ---------------------------------------------------------------------------
+
+
+class TestSuppression:
+    """suppress() causes get_completions() to yield nothing until text changes."""
+
+    def test_suppress_blocks_completions(self):
+        cmds = _standard_commands()
+        completer = SlashCommandCompleter(cmds, ["help", "quit"])
+        # Before suppression, completions work
+        assert len(_completions(completer, "/")) > 0
+        # Suppress at current text "/"
+        completer.suppress("/")
+        # Same text yields nothing
+        assert _completions(completer, "/") == []
+
+    def test_suppress_clears_on_text_change(self):
+        cmds = _standard_commands()
+        completer = SlashCommandCompleter(cmds, ["help", "quit"])
+        completer.suppress("/")
+        # Same text still suppressed
+        assert _completions(completer, "/") == []
+        # Text changes -> suppression clears
+        results = _completions(completer, "/h")
+        assert len(results) > 0
+
+    def test_suppress_only_affects_same_text(self):
+        cmds = _standard_commands()
+        completer = SlashCommandCompleter(cmds, ["help", "quit"])
+        completer.suppress("/he")
+        # Different text -> not suppressed
+        assert len(_completions(completer, "/")) > 0
+
+    def test_suppress_with_prefix_text(self):
+        cmds = _standard_commands()
+        completer = SlashCommandCompleter(cmds, ["help", "quit"])
+        completer.suppress("/he")
+        # Same text -> suppressed
+        assert _completions(completer, "/he") == []
+        # Type more -> clears suppression
+        results = _completions(completer, "/hel")
+        assert results == ["/help"]
+
+    def test_suppress_resets_after_clear(self):
+        """After suppression clears, a second suppress works again."""
+        cmds = _standard_commands()
+        completer = SlashCommandCompleter(cmds, ["help", "quit"])
+        completer.suppress("/")
+        assert _completions(completer, "/") == []
+        # Text change clears suppression
+        _completions(completer, "/h")
+        # Back to "/" works again
+        assert len(_completions(completer, "/")) > 0
+        # Second suppress
+        completer.suppress("/")
+        assert _completions(completer, "/") == []
+
+    def test_suppress_non_slash_still_empty(self):
+        """Suppression doesn't change non-slash behavior (still empty)."""
+        cmds = _standard_commands()
+        completer = SlashCommandCompleter(cmds, ["help", "quit"])
+        completer.suppress("hello")
+        assert _completions(completer, "hello") == []
+        # Non-slash text should always be empty regardless
+        assert _completions(completer, "world") == []
+
+
+class TestProperty9ESCSuppression:
+    """Property 9: After suppress(), get_completions() yields zero results
+    until the input text changes.
+
+    Validates: Requirements 4.1, 4.2
+    """
+
+    @settings(max_examples=100)
+    @given(
+        names=st.lists(
+            _cmd_name_strategy, min_size=1, max_size=8, unique=True,
+        ),
+        pinned_names=st.lists(
+            _cmd_name_strategy, min_size=0, max_size=3, unique=True,
+        ),
+    )
+    def test_suppressed_yields_nothing(self, names, pinned_names):
+        all_names = list(dict.fromkeys(pinned_names + names))
+        cmds = [_make_cmd(n) for n in all_names]
+        completer = SlashCommandCompleter(cmds, pinned_names)
+        # Suppress at "/"
+        completer.suppress("/")
+        assert _completions(completer, "/") == []
+
+    @settings(max_examples=100)
+    @given(
+        names=st.lists(
+            _cmd_name_strategy, min_size=1, max_size=8, unique=True,
+        ),
+        prefix=st.text(
+            alphabet=st.characters(whitelist_categories=("Ll",)),
+            min_size=1,
+            max_size=4,
+        ),
+    )
+    def test_text_change_clears_suppression(self, names, prefix):
+        cmds = [_make_cmd(n) for n in names]
+        completer = SlashCommandCompleter(cmds, [])
+        # Suppress at "/"
+        completer.suppress("/")
+        # Different text should clear suppression and return normal results
+        results = _completions(completer, f"/{prefix}")
+        expected = sorted(f"/{n}" for n in names if n.startswith(prefix))
+        assert sorted(results) == expected
