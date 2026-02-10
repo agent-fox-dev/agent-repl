@@ -29,7 +29,7 @@ def main() -> None:
     args = parser.parse_args()
 
     config_kwargs: dict = {
-        "app_name": "demo",
+        "app_name": "agent-repl demo",
         "app_version": "0.1.0",
         "default_model": DEFAULT_CLAUDE_MODEL,
         "plugins": ["examples.demo_plugin"],

@@ -1,6 +1,7 @@
 # Agent-repl
 .af/
-
+.claude/
+AGENTS.md
 # Environment
 .env
 

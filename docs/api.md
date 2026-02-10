@@ -40,5 +40,3 @@ app.run()  # blocking; starts the REPL
 |--------|-------------|
 | `StreamEvent` | Dataclass: `type`, `content`, `metadata` |
 | `StreamEventType` | Enum: `TEXT_DELTA`, `TOOL_USE_START`, `TOOL_INPUT_DELTA`, `TOOL_RESULT`, `USAGE`, `ERROR` |
-
-For full interface definitions, data models, and correctness properties, see [specs/agent_repl/design.md](../specs/agent_repl/design.md).
