@@ -80,8 +80,8 @@ integration.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 3. Custom SlashCommandCompleter
-  - [ ] 3.1 Create `src/agent_repl/completer.py`
+- [x] 3. Custom SlashCommandCompleter
+  - [x] 3.1 Create `src/agent_repl/completer.py`
     - Implement `SlashCommandCompleter(Completer)` with:
       - `__init__(self, commands, pinned_names, max_pinned_display=6)`
       - `update_commands(self, commands, pinned_names)` for post-init updates
@@ -93,7 +93,7 @@ integration.
     - Each `Completion` has `display="/{name}"` and `display_meta=description`
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.4, 3.1, 3.2, 3.3_
 
-  - [ ] 3.2 Write unit tests for `SlashCommandCompleter`
+  - [x] 3.2 Write unit tests for `SlashCommandCompleter`
     - Test: input `/` yields only pinned commands
     - Test: input `/he` yields commands starting with `he`
     - Test: input `/nonexistent` yields empty
@@ -110,11 +110,11 @@ integration.
     - **Property 7: Pinned Cap Enforcement**
     - **Validates: Requirements 1.1, 1.2, 1.3, 1.4, 2.1, 2.4, 3.1, 3.2, 3.3, 3.4**
 
-  - [ ] 3.V Verify task group 3
-    - [ ] All new tests pass: `uv run pytest -q tests/test_completer.py`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 1.1, 1.2, 1.3, 1.4, 2.1, 2.4, 3.1, 3.2, 3.3, 3.4 acceptance criteria met
+  - [x] 3.V Verify task group 3
+    - [x] All new tests pass: `uv run pytest -q tests/test_completer.py`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 1.1, 1.2, 1.3, 1.4, 2.1, 2.4, 3.1, 3.2, 3.3, 3.4 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 3 is complete. Do NOT continue to task group 4 in this session. -->
 
