@@ -8,9 +8,9 @@ typed at the start of the input line. The completer is aware of pinned commands
 and supports real-time type-ahead filtering.
 
 The design leverages prompt-toolkit's built-in completion system (completer
-protocol, completion menu rendering, Escape-to-dismiss) rather than building
-custom UI. This minimizes new code and ensures consistency with standard
-terminal autocomplete UX.
+protocol, completion menu rendering) rather than building custom UI. ESC-to-
+dismiss requires custom implementation because prompt-toolkit does not natively
+bind ESC to dismiss completions (Emacs mode uses Ctrl+G, Vi mode uses Ctrl+E).
 
 ## Architecture
 
@@ -226,6 +226,69 @@ yield at most 6 completions when the input is exactly `/`.
 pinned set SHALL be `["help", "quit"]`.
 
 **Validates: Requirement 5.1**
+
+## ESC Dismiss Mechanism
+
+prompt-toolkit does **not** bind ESC to dismiss completions by default:
+
+- In Emacs mode (the default), ESC is a no-op for completions (Ctrl+G cancels).
+- In Vi mode, Ctrl+E cancels completions.
+- With `complete_while_typing=True`, even if completions are cancelled, they
+  re-trigger immediately because prompt-toolkit has no "dismissed" state — it
+  only checks whether `complete_state` is `None` before starting new
+  completions.
+
+### Solution: Suppression flag in `SlashCommandCompleter`
+
+Add a `_suppressed` boolean to `SlashCommandCompleter`:
+
+1. **ESC key binding** in `TUIShell._create_key_bindings()`: When the
+   completion menu is visible and the user presses ESC, set
+   `buffer.complete_state = None` to close the menu AND call
+   `completer.suppress()` to set `_suppressed = True`.
+
+2. **Suppression check** in `get_completions()`: When `_suppressed` is `True`,
+   yield nothing. This prevents `complete_while_typing` from re-opening the
+   menu.
+
+3. **Auto-unsuppress on text change**: At the start of `get_completions()`,
+   compare the current input text to a stored `_last_text` snapshot. If the
+   text has changed since suppression, clear the flag. This allows the menu to
+   reappear once the user types or deletes a character.
+
+```python
+# In SlashCommandCompleter:
+def suppress(self) -> None:
+    """Suppress completions until the input text changes."""
+    self._suppressed = True
+
+def get_completions(self, document, complete_event):
+    text = document.text_before_cursor
+    if self._suppressed:
+        if text != self._suppressed_text:
+            self._suppressed = False
+        else:
+            return
+    self._suppressed_text = text
+    # ... existing logic ...
+```
+
+```python
+# In TUIShell._create_key_bindings():
+from prompt_toolkit.filters import has_completions
+
+@kb.add("escape", filter=has_completions)
+def _dismiss_completions(event):
+    event.current_buffer.complete_state = None
+    self._completer.suppress()
+```
+
+### Correctness Property 9: ESC Suppression
+
+*For any* input state where the completion menu is visible, pressing ESC SHALL
+cause `get_completions()` to yield zero results until the input text changes.
+
+**Validates: Requirements 4.1, 4.2**
 
 ## Error Handling
 
