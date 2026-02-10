@@ -48,12 +48,15 @@ uv run python examples/demo.py --echo
 
 ## Available Commands
 
-| Command | Source | Description |
-|---|---|---|
-| `/help` | Built-in | List all available commands |
-| `/version` | Built-in | Show app name and version |
-| `/quit` | Built-in | Exit the application |
-| `/greet` | Demo plugin | Display a greeting message |
-| `/stats` | Demo plugin | Show session token usage statistics |
-| `/clear` | Echo agent | Clear conversation history |
-| `/compact` | Echo agent | Replace history with a summary |
+| Command | Source | Pinned | Description |
+|---|---|---|---|
+| `/help` | Built-in | Yes | List all available commands |
+| `/version` | Built-in | No | Show app name and version |
+| `/quit` | Built-in | Yes | Exit the application |
+| `/greet` | Demo plugin | Yes | Display a greeting message |
+| `/stats` | Demo plugin | No | Show session token usage statistics |
+| `/clear` | Echo agent | No | Clear conversation history |
+| `/compact` | Echo agent | No | Replace history with a summary |
+
+Pinned commands appear in the completion dropdown when you type `/`.
+Non-pinned commands are accessible by typing more characters (e.g., `/st` for `/stats`).
