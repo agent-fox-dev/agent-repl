@@ -605,8 +605,8 @@ session.
 
 <!-- SESSION BOUNDARY: Task group 14 is complete. Do NOT continue to task group 15 in this session. -->
 
-- [ ] 15. CLI Slash Command Invocation
-  - [ ] 15.1 Implement CLI dispatch in `src/agent_repl/app.py`
+- [x] 15. CLI Slash Command Invocation
+  - [x] 15.1 Implement CLI dispatch in `src/agent_repl/app.py`
     - `App.run_cli_command(command_name: str, args: list[str]) -> int`:
       - Call `_setup()` to initialize all subsystems
       - Map `command_name` to slash command name (strip leading `--` if present)
@@ -627,7 +627,7 @@ session.
       - `/help`, `/quit`, `/copy`, `/agent`, `/stats`: `cli_exposed=False`
     - _Requirements: 13.1-13.5, 13.E1-13.E3_
 
-  - [ ] 15.2 Write unit tests for CLI invocation
+  - [x] 15.2 Write unit tests for CLI invocation
     - `tests/test_cli.py`
     - **Property 17: CLI Command Filtering** -- only cli_exposed commands available
     - Test `--compact` maps to `/compact` command
@@ -639,11 +639,11 @@ session.
     - Test multiple flags → error or first-only
     - **Validates: Requirements 13.1-13.5, 13.E1-13.E3**
 
-  - [ ] 15.V Verify task group 15
-    - [ ] All new tests pass: `uv run pytest tests/test_cli.py -q`
-    - [ ] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
-    - [ ] No linter warnings: `uv run ruff check src/ tests/`
-    - [ ] Requirements 13.1-13.5, 13.E1-13.E3 acceptance criteria met
+  - [x] 15.V Verify task group 15
+    - [x] All new tests pass: `uv run pytest tests/test_cli.py -q`
+    - [x] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
+    - [x] No linter warnings: `uv run ruff check src/ tests/`
+    - [x] Requirements 13.1-13.5, 13.E1-13.E3 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 15 is complete. Do NOT continue to task group 16 in this session. -->
 

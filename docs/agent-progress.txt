@@ -357,3 +357,35 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 15 (CLI Slash Command Invocation)
+
+---
+
+2026-02-11T18:30:00Z
+Specification: .specs/01_base_app
+Task: 15 (CLI Slash Command Invocation)
+Branch: feature/cli-invocation
+
+Completed:
+- 15.1 app.py: App.run_cli_command(command_name, args) -> int
+  - Strips leading -- from command name
+  - Looks up command in registry, validates cli_exposed=True
+  - Builds CommandContext with args (joined) and argv (list)
+  - Catches handler exceptions → show_error, return 1
+  - Returns 0 on success, 1 on any error
+  - _show_available_cli_commands() helper for error messages
+  - Marked /clear and /compact as cli_exposed=True in claude_agent.py
+- 15.2 test_cli.py: 19 tests including Property 17 (Hypothesis)
+  - Successful invocation, dash stripping, handler called with correct context
+  - No REPL started, parameter passing, non-CLI command rejection
+  - Unknown command with available commands list, handler exception handling
+  - CLI exposure verification for all 6 built-in commands
+- 15.V Verification: 384 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/test_cli.py -q → 19 passed
+- uv run pytest tests/ -q --ignore=tests/integration → 384 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 16 (Checkpoint - Full Library Complete)
