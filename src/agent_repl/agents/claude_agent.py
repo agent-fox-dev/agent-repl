@@ -93,11 +93,13 @@ class ClaudeAgentPlugin:
                 name="clear",
                 description="Clear conversation history",
                 handler=_handle_clear,
+                cli_exposed=True,
             ),
             SlashCommand(
                 name="compact",
                 description="Summarize and compact conversation history",
                 handler=_handle_compact,
+                cli_exposed=True,
             ),
         ]
 
