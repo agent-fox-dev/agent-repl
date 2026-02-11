@@ -324,3 +324,36 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 14 (Agent Session Spawning)
+
+---
+
+2026-02-11T18:00:00Z
+Specification: .specs/01_base_app
+Task: 14 (Agent Session Spawning)
+Branch: feature/session-spawner
+
+Completed:
+- 14.1 session_spawner.py: SessionSpawner class
+  - __init__(agent_factory): stores callable for creating agents
+  - async spawn(config: SpawnConfig): full lifecycle
+    - Pre-hook (sync): on failure → log error, raise, abort (no agent, no post-hook)
+    - Agent: create via factory, send_message with empty MessageContext, consume stream
+    - On agent failure → log error, still run post-hook, then raise RuntimeError
+    - Post-hook (sync): on failure → log error (doesn't propagate)
+  - Support for no hooks, pre-only, post-only, or both
+  - App.spawn_session(config) → asyncio.create_task for parallel spawns
+  - App._setup() creates SessionSpawner if agent_factory is configured
+- 14.2 test_session_spawner.py: 15 tests covering successful spawn, lifecycle order,
+  pre-hook failure (abort + no post-hook), agent failure (post-hook still runs),
+  post-hook failure (logged not raised), empty context, parallel spawns,
+  independent agents, stream consumption, no hooks
+- 14.V Verification: 365 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/test_session_spawner.py -q → 15 passed
+- uv run pytest tests/ -q --ignore=tests/integration → 365 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 15 (CLI Slash Command Invocation)

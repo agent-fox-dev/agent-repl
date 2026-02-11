@@ -570,8 +570,8 @@ session.
 
 <!-- SESSION BOUNDARY: Task group 13 is complete. Do NOT continue to task group 14 in this session. -->
 
-- [ ] 14. Agent Session Spawning
-  - [ ] 14.1 Implement `SessionSpawner` in `src/agent_repl/app.py` (or dedicated module)
+- [x] 14. Agent Session Spawning
+  - [x] 14.1 Implement `SessionSpawner` in `src/agent_repl/session_spawner.py`
     - `SessionSpawner` class
     - `__init__(self, agent_factory: Callable[..., AgentPlugin])`
     - `async spawn(self, config: SpawnConfig) -> None`:
@@ -587,7 +587,7 @@ session.
     - Expose spawn on `App` class: `async def spawn_session(self, config: SpawnConfig) -> asyncio.Task`
     - _Requirements: 12.1-12.6, 12.E1-12.E3_
 
-  - [ ] 14.2 Write unit tests for session spawning
+  - [x] 14.2 Write unit tests for session spawning
     - `tests/test_session_spawner.py`
     - Test successful spawn: pre-hook called → agent created → message sent → post-hook called
     - Test pre-hook failure: error reported, agent NOT created, post-hook NOT called
@@ -597,11 +597,11 @@ session.
     - Test spawn with no hooks: works without pre/post hooks
     - **Validates: Requirements 12.1-12.6, 12.E1-12.E3**
 
-  - [ ] 14.V Verify task group 14
-    - [ ] All new tests pass: `uv run pytest tests/test_session_spawner.py -q`
-    - [ ] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
-    - [ ] No linter warnings: `uv run ruff check src/ tests/`
-    - [ ] Requirements 12.1-12.6, 12.E1-12.E3 acceptance criteria met
+  - [x] 14.V Verify task group 14
+    - [x] All new tests pass: `uv run pytest tests/test_session_spawner.py -q`
+    - [x] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
+    - [x] No linter warnings: `uv run ruff check src/ tests/`
+    - [x] Requirements 12.1-12.6, 12.E1-12.E3 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 14 is complete. Do NOT continue to task group 15 in this session. -->
 
