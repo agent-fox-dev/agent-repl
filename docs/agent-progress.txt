@@ -24,3 +24,32 @@ Verification:
 - make build → Successfully built agent_repl-0.1.0
 
 Next session: Task group 3 (Input Parsing + File Context Resolution)
+
+---
+
+2026-02-11T13:30:00Z
+Specification: .specs/01_base_app
+Task: 3 (Input Parsing + File Context Resolution)
+Branch: feature/input-parsing-file-context
+
+Completed:
+- 3.1 input_parser.py: ParsedCommand, ParsedFreeText, parse_input()
+  - Slash command detection with /+non-whitespace, split on first whitespace
+  - @path mention extraction via regex
+  - Empty/whitespace → None
+- 3.2 file_context.py: resolve_file_context(), resolve_mentions()
+  - UTF-8 file reading with size limit enforcement
+  - Binary file detection (null byte heuristic)
+  - Non-recursive directory reading, sorted alphabetically
+  - .gitignore parsing and filtering
+  - Error handling for all edge cases
+- 3.3 test_input_parser.py: 25 tests including Properties 1-3 (Hypothesis)
+- 3.4 test_file_context.py: 21 tests including Properties 12-13
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 98 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 4 (Session Management + Clipboard)
