@@ -31,7 +31,7 @@ except ImportError:
         "Install with: pip install claude-agent-sdk"
     )
 
-_DEFAULT_MODEL = "claude-sonnet-4-20250514"
+_DEFAULT_MODEL = "claude-opus-4-6"
 
 _AUTH_ENV_VARS = (
     "ANTHROPIC_API_KEY",

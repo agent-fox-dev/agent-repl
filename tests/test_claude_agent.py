@@ -210,7 +210,7 @@ class TestSendMessage:
 
         assistant_msg = real_sdk.AssistantMessage(
             content=[real_sdk.TextBlock(text="Hello world")],
-            model="claude-sonnet-4-20250514",
+            model="claude-opus-4-6",
         )
 
         async def mock_query(**kwargs):
@@ -245,7 +245,7 @@ class TestSendMessage:
             content=[
                 real_sdk.ToolUseBlock(id="tu_1", name="read_file", input={"path": "x"})
             ],
-            model="claude-sonnet-4-20250514",
+            model="claude-opus-4-6",
         )
 
         async def mock_query(**kwargs):
@@ -281,7 +281,7 @@ class TestSendMessage:
             content=[
                 real_sdk.ToolUseBlock(id="tu_1", name="read_file", input={})
             ],
-            model="claude-sonnet-4-20250514",
+            model="claude-opus-4-6",
         )
         user_msg = real_sdk.UserMessage(
             content=[
@@ -366,7 +366,7 @@ class TestSendMessage:
 
         assistant_msg = real_sdk.AssistantMessage(
             content=[],
-            model="claude-sonnet-4-20250514",
+            model="claude-opus-4-6",
             error="authentication_failed",
         )
 
@@ -401,7 +401,7 @@ class TestSendMessage:
 
         assistant_msg = real_sdk.AssistantMessage(
             content=[],
-            model="claude-sonnet-4-20250514",
+            model="claude-opus-4-6",
             error="rate_limit",
         )
 
