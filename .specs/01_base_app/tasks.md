@@ -372,8 +372,8 @@ session.
 
 <!-- SESSION BOUNDARY: Task group 9 is complete. Do NOT continue to task group 10 in this session. -->
 
-- [ ] 10. Slash Command Completer + Built-in Commands
-  - [ ] 10.1 Implement `src/agent_repl/completer.py`
+- [x] 10. Slash Command Completer + Built-in Commands
+  - [x] 10.1 Implement `src/agent_repl/completer.py`
     - `SlashCommandCompleter(Completer)` class
     - `__init__(self, registry, pinned_names, max_pinned=6)`
     - `_dismissed: bool` flag, reset on text change
@@ -387,7 +387,7 @@ session.
     - Integrate with prompt_toolkit key bindings for ESC dismiss
     - _Requirements: 4.6-4.9, 4.E1, 4.E2_
 
-  - [ ] 10.2 Implement `src/agent_repl/builtin_commands.py`
+  - [x] 10.2 Implement `src/agent_repl/builtin_commands.py`
     - `BuiltinCommandsPlugin` class implementing Plugin protocol
     - `name = "builtin"`, `description = "Built-in REPL commands"`
     - `get_commands()` returns list of SlashCommand objects:
@@ -400,7 +400,7 @@ session.
     - `on_load()`, `on_unload()`, `get_status_hints()` -- minimal implementations
     - _Requirements: 5.1-5.7, 5.E1-5.E4_
 
-  - [ ] 10.3 Write tests for completer
+  - [x] 10.3 Write tests for completer
     - `tests/test_completer.py`
     - Test bare `/` returns only pinned commands in pinned order
     - Test `/<prefix>` returns matching commands alphabetically
@@ -412,7 +412,7 @@ session.
     - Incorporate Properties 5 and 6 (prefix and pinned correctness)
     - **Validates: Requirements 4.6-4.9, 4.E1, 4.E2**
 
-  - [ ] 10.4 Write unit tests for built-in commands
+  - [x] 10.4 Write unit tests for built-in commands
     - `tests/test_builtin_commands.py`
     - Test `/help` lists all registered commands
     - Test `/quit` triggers exit
@@ -423,11 +423,11 @@ session.
     - Test `/stats` formatting: 0 tokens, < 1000, >= 1000
     - **Validates: Requirements 5.1-5.7, 5.E1-5.E4**
 
-  - [ ] 10.V Verify task group 10
-    - [ ] All new tests pass: `uv run pytest tests/test_completer.py tests/test_builtin_commands.py -q`
-    - [ ] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
-    - [ ] No linter warnings: `uv run ruff check src/ tests/`
-    - [ ] Requirements 4.6-4.9, 4.E1, 4.E2, 5.1-5.7, 5.E1-5.E4 acceptance criteria met
+  - [x] 10.V Verify task group 10
+    - [x] All new tests pass: `uv run pytest tests/test_completer.py tests/test_builtin_commands.py -q`
+    - [x] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
+    - [x] No linter warnings: `uv run ruff check src/ tests/`
+    - [x] Requirements 4.6-4.9, 4.E1, 4.E2, 5.1-5.7, 5.E1-5.E4 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 10 is complete. Do NOT continue to task group 11 in this session. -->
 

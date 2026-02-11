@@ -198,3 +198,37 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 10 (Slash Command Completer + Built-in Commands)
+
+---
+
+2026-02-11T16:00:00Z
+Specification: .specs/01_base_app
+Task: 10 (Slash Command Completer + Built-in Commands)
+Branch: feature/completer-builtin-commands
+
+Completed:
+- 10.1 completer.py: SlashCommandCompleter(Completer) class
+  - Bare "/" → pinned commands via registry.get_pinned()
+  - "/<prefix>" → prefix completion via registry.complete()
+  - dismiss()/reset_dismiss() for ESC behavior
+  - Returns Completion objects with display and display_meta
+- 10.2 builtin_commands.py: BuiltinCommandsPlugin class
+  - /help: lists all registered commands with descriptions
+  - /quit: raises QuitRequestedError sentinel
+  - /version: displays app_name and app_version
+  - /copy: copies last assistant response to clipboard (or info if none)
+  - /agent: displays active agent name + model (or info if none)
+  - /stats: formats token usage with format_input()/format_output()
+  - Implements Plugin protocol with on_load/on_unload/get_status_hints
+- Added QuitRequestedError to exceptions.py (ruff N818 naming rule)
+- 10.3 test_completer.py: 16 tests
+- 10.4 test_builtin_commands.py: 17 tests
+- 10.V Verification: 280 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 280 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 11 (Checkpoint) then 12 (REPL Loop + App Orchestration)

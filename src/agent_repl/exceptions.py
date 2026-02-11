@@ -20,3 +20,7 @@ class ClipboardError(AgentReplError):
 
 class FileContextError(AgentReplError):
     """Raised on file context resolution errors."""
+
+
+class QuitRequestedError(AgentReplError):
+    """Sentinel exception raised by /quit to signal REPL exit."""
