@@ -16,7 +16,7 @@ uv add agent_repl
 From this repo (git or path):
 
 ```shell
-uv add 'agent_repl @ git+https://github.com/agent-repl-dev/agent-repl.git'
+uv add 'agent_repl @ git+https://github.com/agent-fox-dev/agent-repl.git'
 # or from a local clone:
 uv add --path /path/to/agent-repl
 ```
