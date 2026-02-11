@@ -1,3 +1,4 @@
+from agent_repl.app import App
 from agent_repl.types import (
     AgentPlugin,
     Config,
@@ -10,6 +11,7 @@ from agent_repl.types import (
 
 __all__ = [
     "AgentPlugin",
+    "App",
     "Config",
     "Plugin",
     "SlashCommand",
