@@ -193,13 +193,13 @@ session.
 
 <!-- SESSION BOUNDARY: Task group 4 is complete. Do NOT continue to task group 5 in this session. -->
 
-- [ ] 5. Checkpoint - Foundation + Core Utilities Complete
+- [x] 5. Checkpoint - Foundation + Core Utilities Complete
   - Ensure all tests pass: types, exceptions, input_parser, file_context, session, clipboard.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 6. Command Registry + Config Loader
-  - [ ] 6.1 Implement `src/agent_repl/command_registry.py`
+- [x] 6. Command Registry + Config Loader
+  - [x] 6.1 Implement `src/agent_repl/command_registry.py`
     - `CommandRegistry` class
       - Internal `_commands: dict[str, SlashCommand]`
       - `register(command: SlashCommand)` -- stores by name (last-write-wins for overrides)
@@ -209,7 +209,7 @@ session.
       - `get_pinned(pinned_names: list[str], max_count: int) -> list[SlashCommand]` -- returns registered commands in pinned order, capped at max_count
     - _Requirements: 4.1-4.5, 4.E1-4.E3_
 
-  - [ ] 6.2 Implement `src/agent_repl/config_loader.py`
+  - [x] 6.2 Implement `src/agent_repl/config_loader.py`
     - `LoadedConfig` dataclass (plugin_paths: list[str], raw: dict[str, Any])
     - `load_config(path: str = ".af/config.toml") -> LoadedConfig`
     - Missing file → create default template, return empty LoadedConfig
@@ -218,14 +218,14 @@ session.
     - Default template content: commented example with `[plugins]` section
     - _Requirements: 10.10, 10.11, 10.12, 10.13_
 
-  - [ ] 6.3 Write property tests for command_registry
+  - [x] 6.3 Write property tests for command_registry
     - `tests/test_command_registry.py`
     - **Property 4: Command Registry Lookup Consistency** -- last registered handler wins; list_all alphabetical
     - **Property 5: Prefix Completion Correctness** -- exact subset matching prefix, sorted
     - **Property 6: Pinned Command Subset** -- only registered + pinned, in pinned order, capped
     - **Validates: Requirements 4.1-4.5, 4.E1-4.E3**
 
-  - [ ] 6.4 Write unit tests for config_loader
+  - [x] 6.4 Write unit tests for config_loader
     - `tests/test_config_loader.py`
     - **Property 20: Config File Resilience** -- never raises for any file state
     - Test valid TOML with plugins
@@ -235,11 +235,11 @@ session.
     - Test plugin-specific sections accessible via `raw`
     - **Validates: Requirements 10.10-10.13**
 
-  - [ ] 6.V Verify task group 6
-    - [ ] All new tests pass: `uv run pytest tests/test_command_registry.py tests/test_config_loader.py -q`
-    - [ ] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
-    - [ ] No linter warnings: `uv run ruff check src/ tests/`
-    - [ ] Requirements 4.1-4.5, 4.E1-4.E3, 10.10-10.13 acceptance criteria met
+  - [x] 6.V Verify task group 6
+    - [x] All new tests pass: `uv run pytest tests/test_command_registry.py tests/test_config_loader.py -q`
+    - [x] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
+    - [x] No linter warnings: `uv run ruff check src/ tests/`
+    - [x] Requirements 4.1-4.5, 4.E1-4.E3, 10.10-10.13 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 6 is complete. Do NOT continue to task group 7 in this session. -->
 
