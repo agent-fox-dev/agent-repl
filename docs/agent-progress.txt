@@ -1,96 +1,417 @@
-2026-02-10T12:00:00Z
-Specification: .specs/02_slash_command_menu
-Task: 1 — Data Model Extensions (subtasks 1.1–1.6, 1.V)
-Branch: feature/slash-command-menu-data-model
+2026-02-11T13:15:00Z
+Specification: .specs/01_base_app
+Task: 1 (Project Scaffolding + Core Types)
+Branch: feature/project-scaffolding
 
 Completed:
-- Added `pinned: bool = False` field to SlashCommand dataclass
-- Added `pinned_commands: list[str] | None = None` field to Config dataclass
-- Marked built-in /help and /quit commands as pinned=True
-- Added `pinned_commands()` method to CommandRegistry (merge + dedup logic)
-- Added DEFAULT_PINNED_COMMANDS and MAX_PINNED_DISPLAY constants
-- Added 17 new tests (unit + property-based) for all new functionality
+- 1.1 Project structure: src/agent_repl/, tests/, tests/integration/, conftest.py
+- 1.2 pyproject.toml with dependencies, build system, tool config
+- 1.3 Makefile with build, test, lint, package, clean targets
+- 1.4 types.py: StreamEventType, Theme, StreamEvent, TokenUsage, FileContext,
+  ToolUse, ConversationTurn, SlashCommand, Config, SpawnConfig, MessageContext,
+  CommandContext, PluginContext, Plugin protocol, AgentPlugin protocol
+- 1.5 constants.py: default values
+- 1.6 exceptions.py: AgentReplError hierarchy (6 exception classes)
+- 1.7 __init__.py: public API exports (7 types, App deferred)
+- 1.8 test_types.py (40 tests), test_exceptions.py (12 tests)
+- 1.V Verification: 52 tests pass, linter clean, build succeeds
 
-Documentation touched:
-- .specs/02_slash_command_menu/tasks.md (checkbox updates)
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
 
 Verification:
-- 271 tests passed (254 baseline + 17 new), 0 failures
-- ruff check clean on all changed files
+- uv run pytest tests/test_types.py tests/test_exceptions.py -q → 52 passed
+- uv run ruff check src/ tests/ → All checks passed
+- make build → Successfully built agent_repl-0.1.0
 
-Next session:
-- Task group 2: Checkpoint — Data Model Complete
-- Task group 3: Implement SlashCommandCompleter module
+Next session: Task group 3 (Input Parsing + File Context Resolution)
 
 ---
 
-2026-02-10T13:00:00Z
-Specification: .specs/02_slash_command_menu
-Task: 3 — Custom SlashCommandCompleter (subtasks 3.1, 3.2, 3.V)
-Branch: feature/slash-command-completer
+2026-02-11T13:30:00Z
+Specification: .specs/01_base_app
+Task: 3 (Input Parsing + File Context Resolution)
+Branch: feature/input-parsing-file-context
 
 Completed:
-- Created src/agent_repl/completer.py with SlashCommandCompleter class
-  - Pinned-only display on "/", prefix filtering on "/<chars>"
-  - Dedup/merge logic for pinned resolution with cap enforcement
-  - update_commands() for post-init updates
-- Created tests/test_completer.py with 28 tests:
-  - Unit tests: slash-only, prefix filtering, non-slash, pinned cap, display format, update, empty
-  - Property tests: Properties 1, 2, 3, 4, 6, 7
+- 3.1 input_parser.py: ParsedCommand, ParsedFreeText, parse_input()
+  - Slash command detection with /+non-whitespace, split on first whitespace
+  - @path mention extraction via regex
+  - Empty/whitespace → None
+- 3.2 file_context.py: resolve_file_context(), resolve_mentions()
+  - UTF-8 file reading with size limit enforcement
+  - Binary file detection (null byte heuristic)
+  - Non-recursive directory reading, sorted alphabetically
+  - .gitignore parsing and filtering
+  - Error handling for all edge cases
+- 3.3 test_input_parser.py: 25 tests including Properties 1-3 (Hypothesis)
+- 3.4 test_file_context.py: 21 tests including Properties 12-13
 
-Documentation touched:
-- .specs/02_slash_command_menu/tasks.md (checkbox updates)
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
 
 Verification:
-- 299 tests passed (271 baseline + 28 new), 0 failures
-- ruff check clean on all changed files
+- uv run pytest tests/ -q --ignore=tests/integration → 98 passed
+- uv run ruff check src/ tests/ → All checks passed
 
-Next session:
-- Task group 4: Checkpoint — Completer Module Complete
-- Task group 5: TUI and App Integration
+Next session: Task group 4 (Session Management + Clipboard)
 
 ---
 
-2026-02-10T14:00:00Z
-Specification: .specs/02_slash_command_menu
-Task: 5 — TUI and App Integration (subtasks 5.1–5.4, 5.V)
-Branch: feature/slash-command-tui-integration
+2026-02-11T14:00:00Z
+Specification: .specs/01_base_app
+Task: 4 (Session Management + Clipboard)
+Branch: feature/session-clipboard
 
 Completed:
-- Replaced WordCompleter with SlashCommandCompleter in TUIShell
-- Added complete_while_typing=True to PromptSession
-- Replaced set_completions() with set_completer(commands, pinned_names)
-- Updated App._run_async to resolve pinned names from Config and wire completer
-- Updated test_tui.py and test_app.py for new completer API
-- SlashCommandCompleter not exported in __init__.py (internal detail)
+- 4.1 session.py: TokenStatistics (accumulate, format_tokens, format_input/output),
+  Session (add_turn, get_history, clear, last_assistant_response, replace_with_summary)
+- 4.2 clipboard.py: copy_to_clipboard() with platform detection
+  (macOS→pbcopy, Linux Wayland→wl-copy, Linux X11→xclip), ClipboardError on failure
+- 4.3 test_session.py: 22 tests including Properties 7-11 (Hypothesis)
+- 4.4 test_clipboard.py: 17 tests including Property 14
 
-Documentation touched:
-- .specs/02_slash_command_menu/tasks.md (checkbox updates)
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
 
 Verification:
-- 301 tests passed (299 baseline + 2 new), 0 failures
-- ruff check clean on all changed files
+- uv run pytest tests/ -q --ignore=tests/integration → 137 passed
+- uv run ruff check src/ tests/ → All checks passed
 
-Next session:
-- Task group 6: Final Verification (manual smoke test)
+Next session: Task group 5 (Checkpoint) then 6 (Command Registry + Config Loader)
 
 ---
 
-2026-02-10T15:00:00Z
-Specification: .specs/02_slash_command_menu
-Task: 6 — Final Verification (subtasks 6.1, 6.2)
-Branch: feature/slash-command-final-verification
+2026-02-11T14:30:00Z
+Specification: .specs/01_base_app
+Task: 5 (Checkpoint) + 6 (Command Registry + Config Loader)
+Branch: feature/command-registry-config-loader
 
 Completed:
-- Programmatic end-to-end integration test: all 10 checks passed
-  - Pinned commands show on "/", type-ahead filtering works,
-    non-slash yields nothing, custom Config.pinned_commands respected,
-    display format correct
-- Full test suite: 301 passed, 0 failures
-- Linter: clean on all spec-02 files
+- 5. Checkpoint verified: 137 tests pass, linter clean
+- 6.1 command_registry.py: CommandRegistry class
+  - register(), get(), list_all(), complete(), get_pinned()
+  - Deduplication of pinned names, max_count cap
+- 6.2 config_loader.py: LoadedConfig dataclass, load_config()
+  - Missing file → creates default template with [plugins] section
+  - Malformed TOML → logs warning, returns empty LoadedConfig
+  - Valid TOML → extracts [plugins].paths, exposes full raw dict
+  - Uses stdlib tomllib (Python 3.11+)
+- 6.3 test_command_registry.py: 22 tests including Properties 4-6 (Hypothesis)
+- 6.4 test_config_loader.py: 13 tests including Property 20 (Hypothesis)
+- 6.V Verification: 172 tests pass, linter clean
 
-Documentation touched:
-- .specs/02_slash_command_menu/tasks.md (final checkbox updates)
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
 
-SPEC 02_SLASH_COMMAND_MENU: COMPLETE
-All 6 task groups finished. Feature is ready for use.
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 172 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 7 (Plugin System - Loader + Registry)
+
+---
+
+2026-02-11T15:00:00Z
+Specification: .specs/01_base_app
+Task: 7 (Plugin System - Loader + Registry)
+Branch: feature/plugin-system
+
+Completed:
+- 7.1 plugin_loader.py: load_plugin(dotted_path) -> Plugin | None
+  - importlib.import_module for dynamic loading
+  - create_plugin() factory lookup and invocation
+  - Graceful handling: ImportError, missing factory, non-callable, factory exception
+  - All failures logged as warnings, return None
+- 7.2 plugin_registry.py: PluginRegistry class
+  - register(plugin, command_registry): stores plugin, registers commands, detects AgentPlugin
+  - set_agent(): enforces single-agent constraint via PluginError
+  - active_agent property, plugins property (returns copy), get_status_hints()
+- 7.3 test_plugin_system.py: 16 tests including Properties 15-16 (Hypothesis)
+- 7.4 test_plugin_loader.py: 9 tests covering success, import error, missing/non-callable factory, factory exception
+- 7.V Verification: 197 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 197 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 8 (Checkpoint) then 9 (TUI Shell + Stream Handler)
+
+---
+
+2026-02-11T15:15:00Z
+Specification: .specs/01_base_app
+Task: 8 (Checkpoint - Core Infrastructure Complete)
+Branch: develop (checkpoint only)
+
+Completed:
+- 8. Checkpoint verified:
+  - 197 tests pass (18 property-based), linter clean
+  - Module dependency graph verified: no circular dependencies
+  - All modules: types, constants, exceptions, input_parser, file_context,
+    session, clipboard, command_registry, config_loader, plugin_loader,
+    plugin_registry — implemented and tested
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 197 passed
+- uv run pytest tests/ -q -m property --ignore=tests/integration → 18 passed
+- uv run ruff check src/ tests/ → All checks passed
+- Module dependency graph matches design (file_context also depends on constants)
+
+Next session: Task group 9 (TUI Shell + Stream Handler)
+
+---
+
+2026-02-11T15:30:00Z
+Specification: .specs/01_base_app
+Task: 9 (TUI Shell + Stream Handler)
+Branch: feature/tui-stream-handler
+
+Completed:
+- 9.1 tui.py: TUIShell class
+  - Rich Console for output, prompt_toolkit PromptSession for async input
+  - show_banner(), show_markdown() with gutter bar, show_info/error/warning()
+  - show_tool_result() with success/error panel styling
+  - start_spinner/stop_spinner, start_live_text/append_live_text/finalize_live_text
+  - copy_to_clipboard() with ClipboardError handling
+  - prompt_input() async with HTML prompt, completer, toolbar
+  - Ctrl+Y key binding for clipboard copy
+  - set_completer(), set_toolbar_provider(), _build_toolbar()
+  - Theme support via Config.theme
+- 9.2 stream_handler.py: StreamHandler class
+  - handle_stream() processes async StreamEvent iterator
+  - TEXT_DELTA → live text accumulation, TOOL_USE_START → info display
+  - TOOL_RESULT → panel + ToolUse recording, USAGE → token accumulation
+  - Non-fatal ERROR → display + continue, fatal ERROR → terminate
+  - Spinner dismissed on first content event
+  - Empty/cancelled streams handled gracefully
+  - Builds ConversationTurn, adds to session, sets last_response
+- 9.3 test_tui.py: 30 tests covering banner, markdown, messages, panels,
+  spinner, live text, clipboard, completer, toolbar, theming
+- 9.4 test_stream_handler.py: 20 tests including Property 19 (Hypothesis)
+- 9.V Verification: 247 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 247 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 10 (Slash Command Completer + Built-in Commands)
+
+---
+
+2026-02-11T16:00:00Z
+Specification: .specs/01_base_app
+Task: 10 (Slash Command Completer + Built-in Commands)
+Branch: feature/completer-builtin-commands
+
+Completed:
+- 10.1 completer.py: SlashCommandCompleter(Completer) class
+  - Bare "/" → pinned commands via registry.get_pinned()
+  - "/<prefix>" → prefix completion via registry.complete()
+  - dismiss()/reset_dismiss() for ESC behavior
+  - Returns Completion objects with display and display_meta
+- 10.2 builtin_commands.py: BuiltinCommandsPlugin class
+  - /help: lists all registered commands with descriptions
+  - /quit: raises QuitRequestedError sentinel
+  - /version: displays app_name and app_version
+  - /copy: copies last assistant response to clipboard (or info if none)
+  - /agent: displays active agent name + model (or info if none)
+  - /stats: formats token usage with format_input()/format_output()
+  - Implements Plugin protocol with on_load/on_unload/get_status_hints
+- Added QuitRequestedError to exceptions.py (ruff N818 naming rule)
+- 10.3 test_completer.py: 16 tests
+- 10.4 test_builtin_commands.py: 17 tests
+- 10.V Verification: 280 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 280 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 11 (Checkpoint) then 12 (REPL Loop + App Orchestration)
+
+---
+
+2026-02-11T16:15:00Z
+Specification: .specs/01_base_app
+Task: 11 (Checkpoint - All Components Complete)
+Branch: develop (checkpoint only)
+
+Completed:
+- 11. Checkpoint verified:
+  - 280 tests pass (19 property-based), linter clean
+  - All 13 testable modules have corresponding test files
+  - Modules verified: types, constants, exceptions, input_parser, file_context,
+    session, clipboard, command_registry, config_loader, plugin_loader,
+    plugin_registry, tui, stream_handler, completer, builtin_commands
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 280 passed
+- uv run pytest tests/ -q -m property --ignore=tests/integration → 19 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 12 (REPL Loop + App Orchestration)
+
+---
+
+2026-02-11T17:00:00Z
+Specification: .specs/01_base_app
+Task: 12 (REPL Loop + App Orchestration)
+Branch: feature/repl-app
+
+Completed:
+- 12.1 repl.py: REPL class
+  - run() loop: prompt_input → parse_input → dispatch
+  - _handle_command(): registry lookup, CommandContext, QuitRequestedError propagation
+  - _handle_free_text(): agent check, resolve_mentions, MessageContext, StreamHandler
+  - Ctrl+C/D: KeyboardInterrupt/EOFError at prompt → exit; during stream → caught by StreamHandler
+  - Error recovery: command/agent exceptions caught → show_error → continue loop
+- 12.2 app.py: App class
+  - __init__: creates Session, TUIShell, CommandRegistry, PluginRegistry
+  - _setup(): BuiltinCommandsPlugin first, load_config, plugin loading with on_load error handling,
+    agent_factory with full error handling, SlashCommandCompleter, toolbar provider
+  - run(): _setup → show_banner (with agent info) → REPL.run()
+- 12.3 __init__.py: Added App to public API exports (8 total exports)
+- 12.4 test_repl.py: 21 tests including Property 18 (Hypothesis)
+- 12.5 test_app.py: 16 tests
+- 12.V Verification: 317 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/test_repl.py tests/test_app.py -q → 37 passed
+- uv run pytest tests/ -q --ignore=tests/integration → 317 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 13 (Checkpoint) then 14 (CLI + Session Spawner)
+
+---
+
+2026-02-11T17:30:00Z
+Specification: .specs/01_base_app
+Task: 13 (Default Claude Agent)
+Branch: feature/claude-agent
+
+Completed:
+- 13.1 agents/claude_agent.py: ClaudeAgentPlugin class
+  - Implements AgentPlugin protocol: name, description, default_model, send_message, compact_history
+  - Authentication detection: ANTHROPIC_API_KEY, CLAUDE_CODE_USE_VERTEX, CLAUDE_CODE_USE_BEDROCK
+  - No auth → AgentError with setup instructions listing all methods
+  - SDK stream translation: TextBlock→TEXT_DELTA, ToolUseBlock→TOOL_USE_START,
+    ToolResultBlock→TOOL_RESULT (with tool name tracking), ResultMessage→USAGE
+  - AssistantMessage.error → ERROR (fatal for auth/billing, non-fatal for rate_limit etc)
+  - ClaudeSDKError during streaming → ERROR (fatal)
+  - /clear command: clears session history
+  - /compact command: queries agent for summary, replaces history
+  - continue_conversation flag set after first message
+  - Model detection updated from AssistantMessage.model
+  - Graceful degradation: _SDK_AVAILABLE flag, on_load raises if SDK missing
+  - create_plugin() factory function
+- 13.2 test_claude_agent.py: 33 tests covering protocol, auth, on_load, prompt building,
+  stream translation (7 event type tests), commands, status hints, model detection, factory
+- 13.V Verification: 350 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/test_claude_agent.py -q → 33 passed
+- uv run pytest tests/ -q --ignore=tests/integration → 350 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 14 (Agent Session Spawning)
+
+---
+
+2026-02-11T18:00:00Z
+Specification: .specs/01_base_app
+Task: 14 (Agent Session Spawning)
+Branch: feature/session-spawner
+
+Completed:
+- 14.1 session_spawner.py: SessionSpawner class
+  - __init__(agent_factory): stores callable for creating agents
+  - async spawn(config: SpawnConfig): full lifecycle
+    - Pre-hook (sync): on failure → log error, raise, abort (no agent, no post-hook)
+    - Agent: create via factory, send_message with empty MessageContext, consume stream
+    - On agent failure → log error, still run post-hook, then raise RuntimeError
+    - Post-hook (sync): on failure → log error (doesn't propagate)
+  - Support for no hooks, pre-only, post-only, or both
+  - App.spawn_session(config) → asyncio.create_task for parallel spawns
+  - App._setup() creates SessionSpawner if agent_factory is configured
+- 14.2 test_session_spawner.py: 15 tests covering successful spawn, lifecycle order,
+  pre-hook failure (abort + no post-hook), agent failure (post-hook still runs),
+  post-hook failure (logged not raised), empty context, parallel spawns,
+  independent agents, stream consumption, no hooks
+- 14.V Verification: 365 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/test_session_spawner.py -q → 15 passed
+- uv run pytest tests/ -q --ignore=tests/integration → 365 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 15 (CLI Slash Command Invocation)
+
+---
+
+2026-02-11T18:30:00Z
+Specification: .specs/01_base_app
+Task: 15 (CLI Slash Command Invocation)
+Branch: feature/cli-invocation
+
+Completed:
+- 15.1 app.py: App.run_cli_command(command_name, args) -> int
+  - Strips leading -- from command name
+  - Looks up command in registry, validates cli_exposed=True
+  - Builds CommandContext with args (joined) and argv (list)
+  - Catches handler exceptions → show_error, return 1
+  - Returns 0 on success, 1 on any error
+  - _show_available_cli_commands() helper for error messages
+  - Marked /clear and /compact as cli_exposed=True in claude_agent.py
+- 15.2 test_cli.py: 19 tests including Property 17 (Hypothesis)
+  - Successful invocation, dash stripping, handler called with correct context
+  - No REPL started, parameter passing, non-CLI command rejection
+  - Unknown command with available commands list, handler exception handling
+  - CLI exposure verification for all 6 built-in commands
+- 15.V Verification: 384 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/test_cli.py -q → 19 passed
+- uv run pytest tests/ -q --ignore=tests/integration → 384 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 16 (Checkpoint - Full Library Complete)
+
+---
+
+2026-02-11T19:00:00Z
+Specification: .specs/01_base_app
+Task: 16 (Checkpoint - Full Library Complete)
+Branch: develop (checkpoint only)
+
+Completed:
+- 16. Checkpoint verified:
+  - 384 tests pass (19 property-based), linter clean
+  - All 20 correctness properties have corresponding test methods
+  - 19 source modules + 1 agent module, 19 test files
+  - Modules: types, constants, exceptions, input_parser, file_context,
+    session, clipboard, command_registry, config_loader, plugin_loader,
+    plugin_registry, tui, stream_handler, completer, builtin_commands,
+    repl, app, session_spawner, agents/claude_agent
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 384 passed
+- uv run pytest tests/ -q -m property --ignore=tests/integration → 19 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 17 (Canonical Example + Integration Tests)

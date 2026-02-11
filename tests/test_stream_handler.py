@@ -1,251 +1,439 @@
-"""Unit and property tests for the stream handler.
+"""Tests for stream_handler module.
 
-Property 3: Empty Stream No-Op
-Property 4: Final Render Invocation
-Property 7: Stream Event Capture Completeness
-Validates: Requirements 1.2, 1.3, 1.4, 1.5, stream_rendering 5.1-5.4
+Covers Requirements 6.1-6.9, 6.E1, 6.E2 and Property 19.
 """
 
+from __future__ import annotations
+
+from collections.abc import AsyncIterator
 from unittest.mock import MagicMock
 
 import pytest
-from hypothesis import given, settings
+from hypothesis import given
 from hypothesis import strategies as st
 
 from agent_repl.session import Session
-from agent_repl.stream_handler import handle_stream
-from agent_repl.types import StreamEvent, StreamEventType, TokenStatistics
+from agent_repl.stream_handler import StreamHandler
+from agent_repl.types import StreamEvent, StreamEventType, TokenUsage
+
+# --- Helpers ---
 
 
-async def _async_iter(events):
-    """Convert a list of events to an async iterator."""
+async def _events_from_list(events: list[StreamEvent]) -> AsyncIterator[StreamEvent]:
+    """Create an async iterator from a list of StreamEvents."""
     for event in events:
         yield event
 
 
-class TestStreamHandler:
+def _make_tui_mock() -> MagicMock:
+    """Create a mock TUIShell with all needed methods."""
+    tui = MagicMock()
+    tui.start_spinner = MagicMock()
+    tui.stop_spinner = MagicMock()
+    tui.start_live_text = MagicMock()
+    tui.append_live_text = MagicMock()
+    tui.finalize_live_text = MagicMock()
+    tui.show_info = MagicMock()
+    tui.show_error = MagicMock()
+    tui.show_tool_result = MagicMock()
+    tui.set_last_response = MagicMock()
+    return tui
+
+
+# --- Unit tests ---
+
+
+class TestTextDelta:
+    """Requirement 6.2: TEXT_DELTA → live display."""
+
     @pytest.mark.asyncio
-    async def test_text_delta_streamed(self):
-        tui = MagicMock()
-        tui.finish_stream.return_value = "hello"
+    async def test_text_delta_accumulation(self):
+        tui = _make_tui_mock()
         session = Session()
-        stats = TokenStatistics()
-        events = [StreamEvent(type=StreamEventType.TEXT_DELTA, content="hello")]
+        handler = StreamHandler(tui, session)
 
-        turn = await handle_stream(_async_iter(events), tui, session, stats)
-
-        tui.start_stream.assert_called_once()
-        tui.append_stream.assert_called_with("hello")
-        tui.finish_stream.assert_called_once()
-        assert turn.content == "hello"
-
-    @pytest.mark.asyncio
-    async def test_multiple_text_deltas_concatenated(self):
-        tui = MagicMock()
-        tui.finish_stream.return_value = "hello world"
-        session = Session()
-        stats = TokenStatistics()
         events = [
-            StreamEvent(type=StreamEventType.TEXT_DELTA, content="hello "),
-            StreamEvent(type=StreamEventType.TEXT_DELTA, content="world"),
+            StreamEvent(type=StreamEventType.TEXT_DELTA, data={"text": "Hello "}),
+            StreamEvent(type=StreamEventType.TEXT_DELTA, data={"text": "world"}),
         ]
-
-        turn = await handle_stream(_async_iter(events), tui, session, stats)
-
-        tui.start_stream.assert_called_once()
-        assert tui.append_stream.call_count == 2
-        tui.append_stream.assert_any_call("hello ")
-        tui.append_stream.assert_any_call("world")
-        tui.finish_stream.assert_called_once()
-        assert turn.content == "hello world"
+        turn = await handler.handle_stream(_events_from_list(events))
+        assert turn.content == "Hello world"
 
     @pytest.mark.asyncio
-    async def test_tool_result_displayed(self):
-        tui = MagicMock()
+    async def test_text_delta_appends_live(self):
+        tui = _make_tui_mock()
         session = Session()
-        stats = TokenStatistics()
+        handler = StreamHandler(tui, session)
+
+        events = [
+            StreamEvent(type=StreamEventType.TEXT_DELTA, data={"text": "hi"}),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+        tui.start_live_text.assert_called_once()
+        tui.append_live_text.assert_called_once_with("hi")
+        tui.finalize_live_text.assert_called_once()
+
+
+class TestToolUseStart:
+    """Requirement 6.3: TOOL_USE_START → info display."""
+
+    @pytest.mark.asyncio
+    async def test_tool_use_start_shows_info(self):
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        events = [
+            StreamEvent(
+                type=StreamEventType.TOOL_USE_START,
+                data={"name": "search", "id": "t1"},
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+        tui.show_info.assert_called_once()
+        assert "search" in tui.show_info.call_args[0][0]
+
+
+class TestToolResult:
+    """Requirement 6.4: TOOL_RESULT → panel and recording."""
+
+    @pytest.mark.asyncio
+    async def test_tool_result_renders_panel(self):
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
         events = [
             StreamEvent(
                 type=StreamEventType.TOOL_RESULT,
-                content="result",
-                metadata={"tool_id": "t1", "is_error": False, "tool_name": "read"},
-            )
+                data={"name": "search", "result": "found 3", "is_error": False},
+            ),
         ]
-
-        turn = await handle_stream(_async_iter(events), tui, session, stats)
-
-        tui.display_tool_result.assert_called_once()
+        turn = await handler.handle_stream(_events_from_list(events))
+        tui.show_tool_result.assert_called_once_with("search", "found 3", False)
         assert len(turn.tool_uses) == 1
+        assert turn.tool_uses[0].name == "search"
+        assert turn.tool_uses[0].result == "found 3"
+        assert turn.tool_uses[0].is_error is False
+
+    @pytest.mark.asyncio
+    async def test_tool_result_error(self):
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        events = [
+            StreamEvent(
+                type=StreamEventType.TOOL_RESULT,
+                data={"name": "exec", "result": "permission denied", "is_error": True},
+            ),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+        tui.show_tool_result.assert_called_once_with("exec", "permission denied", True)
+        assert turn.tool_uses[0].is_error is True
+
+
+class TestUsage:
+    """Requirement 6.5: USAGE → token accumulation."""
 
     @pytest.mark.asyncio
     async def test_usage_accumulated(self):
-        tui = MagicMock()
+        tui = _make_tui_mock()
         session = Session()
-        stats = TokenStatistics()
+        handler = StreamHandler(tui, session)
+
         events = [
             StreamEvent(
                 type=StreamEventType.USAGE,
-                metadata={"input_tokens": 100, "output_tokens": 50},
-            )
+                data={"input_tokens": 100, "output_tokens": 50},
+            ),
         ]
-
-        await handle_stream(_async_iter(events), tui, session, stats)
-
-        assert stats.total_input_tokens == 100
-        assert stats.total_output_tokens == 50
-
-    @pytest.mark.asyncio
-    async def test_error_displayed(self):
-        tui = MagicMock()
-        session = Session()
-        stats = TokenStatistics()
-        events = [StreamEvent(type=StreamEventType.ERROR, content="oops")]
-
-        await handle_stream(_async_iter(events), tui, session, stats)
-
-        tui.display_error.assert_called_with("oops")
+        turn = await handler.handle_stream(_events_from_list(events))
+        assert turn.usage is not None
+        assert turn.usage.input_tokens == 100
+        assert turn.usage.output_tokens == 50
 
     @pytest.mark.asyncio
-    async def test_spinner_managed(self):
-        tui = MagicMock()
-        tui.finish_stream.return_value = "hi"
+    async def test_usage_accumulated_multiple(self):
+        tui = _make_tui_mock()
         session = Session()
-        stats = TokenStatistics()
-        events = [StreamEvent(type=StreamEventType.TEXT_DELTA, content="hi")]
+        handler = StreamHandler(tui, session)
 
-        await handle_stream(_async_iter(events), tui, session, stats)
+        events = [
+            StreamEvent(
+                type=StreamEventType.USAGE,
+                data={"input_tokens": 100, "output_tokens": 50},
+            ),
+            StreamEvent(
+                type=StreamEventType.USAGE,
+                data={"input_tokens": 200, "output_tokens": 30},
+            ),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+        assert turn.usage.input_tokens == 300
+        assert turn.usage.output_tokens == 80
 
+    @pytest.mark.asyncio
+    async def test_usage_added_to_session(self):
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        events = [
+            StreamEvent(
+                type=StreamEventType.USAGE,
+                data={"input_tokens": 100, "output_tokens": 50},
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+        assert session.stats.total_input == 100
+        assert session.stats.total_output == 50
+
+
+class TestErrorEvents:
+    """Requirements 6.6, 6.7: Non-fatal and fatal errors."""
+
+    @pytest.mark.asyncio
+    async def test_nonfatal_error_continues(self):
+        """6.6: Non-fatal error displays and continues stream."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        events = [
+            StreamEvent(
+                type=StreamEventType.ERROR,
+                data={"message": "rate limit", "fatal": False},
+            ),
+            StreamEvent(type=StreamEventType.TEXT_DELTA, data={"text": "continued"}),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+        assert turn.content == "continued"
+        tui.show_error.assert_called_once()
+        assert "rate limit" in tui.show_error.call_args[0][0]
+
+    @pytest.mark.asyncio
+    async def test_fatal_error_terminates(self):
+        """6.7: Fatal error terminates stream."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        events = [
+            StreamEvent(
+                type=StreamEventType.ERROR,
+                data={"message": "connection lost", "fatal": True},
+            ),
+            StreamEvent(type=StreamEventType.TEXT_DELTA, data={"text": "should not see"}),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+        assert turn.content == ""  # No text accumulated after fatal error
+        tui.show_error.assert_called_once()
+        assert "connection lost" in tui.show_error.call_args[0][0]
+
+
+class TestSpinnerDismissal:
+    """Requirement 6.8: Spinner dismissed on first content."""
+
+    @pytest.mark.asyncio
+    async def test_spinner_dismissed_on_text_delta(self):
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        events = [
+            StreamEvent(type=StreamEventType.TEXT_DELTA, data={"text": "hi"}),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+        # Spinner started, then stopped on first content
         tui.start_spinner.assert_called_once()
-        tui.stop_spinner.assert_called()
+        # stop_spinner called at least once (on first content + finalize)
+        assert tui.stop_spinner.call_count >= 1
 
     @pytest.mark.asyncio
-    async def test_turn_added_to_session(self):
-        tui = MagicMock()
-        tui.finish_stream.return_value = "response"
+    async def test_spinner_dismissed_on_tool_use_start(self):
+        tui = _make_tui_mock()
         session = Session()
-        stats = TokenStatistics()
-        events = [StreamEvent(type=StreamEventType.TEXT_DELTA, content="response")]
+        handler = StreamHandler(tui, session)
 
-        await handle_stream(_async_iter(events), tui, session, stats)
+        events = [
+            StreamEvent(
+                type=StreamEventType.TOOL_USE_START,
+                data={"name": "tool1", "id": "t1"},
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+        tui.start_spinner.assert_called_once()
+        assert tui.stop_spinner.call_count >= 1
 
-        history = session.get_history()
-        assert len(history) == 1
-        assert history[0].role == "assistant"
+
+class TestEmptyStream:
+    """Requirement 6.E1: Empty stream → empty turn."""
 
     @pytest.mark.asyncio
     async def test_empty_stream(self):
-        tui = MagicMock()
+        tui = _make_tui_mock()
         session = Session()
-        stats = TokenStatistics()
+        handler = StreamHandler(tui, session)
 
-        turn = await handle_stream(_async_iter([]), tui, session, stats)
-
+        turn = await handler.handle_stream(_events_from_list([]))
+        assert turn.role == "assistant"
         assert turn.content == ""
-        tui.start_spinner.assert_called_once()
+        assert turn.tool_uses == []
+        assert turn.usage is None
+        # Spinner should still be stopped
         tui.stop_spinner.assert_called()
 
 
-class TestProperty3EmptyStreamNoOp:
-    """Property 3: For streams with no TEXT_DELTA events, the streaming API
-    is never called.
-
-    Feature: stream_rendering, Property 3: Empty Stream No-Op
-    """
+class TestStreamFinalization:
+    """Requirement 6.9: Stream finalization builds ConversationTurn."""
 
     @pytest.mark.asyncio
-    async def test_no_text_deltas_no_stream_calls(self):
-        tui = MagicMock()
+    async def test_full_stream(self):
+        tui = _make_tui_mock()
         session = Session()
-        stats = TokenStatistics()
+        handler = StreamHandler(tui, session)
+
         events = [
+            StreamEvent(type=StreamEventType.TEXT_DELTA, data={"text": "Hello"}),
+            StreamEvent(
+                type=StreamEventType.TOOL_USE_START,
+                data={"name": "search", "id": "t1"},
+            ),
+            StreamEvent(
+                type=StreamEventType.TOOL_RESULT,
+                data={"name": "search", "result": "ok", "is_error": False},
+            ),
             StreamEvent(
                 type=StreamEventType.USAGE,
-                metadata={"input_tokens": 10, "output_tokens": 5},
-            )
+                data={"input_tokens": 10, "output_tokens": 20},
+            ),
         ]
-
-        await handle_stream(_async_iter(events), tui, session, stats)
-
-        tui.start_stream.assert_not_called()
-        tui.append_stream.assert_not_called()
-        tui.finish_stream.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_empty_event_list_no_stream_calls(self):
-        tui = MagicMock()
-        session = Session()
-        stats = TokenStatistics()
-
-        await handle_stream(_async_iter([]), tui, session, stats)
-
-        tui.start_stream.assert_not_called()
-        tui.append_stream.assert_not_called()
-        tui.finish_stream.assert_not_called()
-
-
-class TestProperty4FinalRenderInvocation:
-    """Property 4: For any non-empty sequence of TEXT_DELTA events,
-    finish_stream() is called exactly once after the stream ends.
-
-    Feature: stream_rendering, Property 4: Final Render Invocation
-    """
+        turn = await handler.handle_stream(_events_from_list(events))
+        assert turn.role == "assistant"
+        assert turn.content == "Hello"
+        assert len(turn.tool_uses) == 1
+        assert turn.usage == TokenUsage(input_tokens=10, output_tokens=20)
 
     @pytest.mark.asyncio
-    async def test_finish_called_once_for_single_delta(self):
-        tui = MagicMock()
-        tui.finish_stream.return_value = "text"
+    async def test_turn_added_to_session(self):
+        tui = _make_tui_mock()
         session = Session()
-        stats = TokenStatistics()
-        events = [StreamEvent(type=StreamEventType.TEXT_DELTA, content="text")]
+        handler = StreamHandler(tui, session)
 
-        await handle_stream(_async_iter(events), tui, session, stats)
-
-        tui.finish_stream.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_finish_called_once_for_many_deltas(self):
-        tui = MagicMock()
-        tui.finish_stream.return_value = "abcde"
-        session = Session()
-        stats = TokenStatistics()
         events = [
-            StreamEvent(type=StreamEventType.TEXT_DELTA, content=c)
-            for c in "abcde"
+            StreamEvent(type=StreamEventType.TEXT_DELTA, data={"text": "hi"}),
         ]
-
-        await handle_stream(_async_iter(events), tui, session, stats)
-
-        tui.start_stream.assert_called_once()
-        assert tui.append_stream.call_count == 5
-        tui.finish_stream.assert_called_once()
-
-
-# Strategy for generating stream events
-_event_strategy = st.builds(
-    StreamEvent,
-    type=st.sampled_from(list(StreamEventType)),
-    content=st.text(min_size=0, max_size=50),
-)
-
-
-class TestProperty7StreamEventCaptureCompleteness:
-    """Property 7: All stream events are stored in the session.
-
-    Feature: agent_repl, Property 7: Stream Event Capture Completeness
-    """
-
-    @settings(max_examples=100)
-    @given(events=st.lists(_event_strategy, min_size=0, max_size=10))
-    @pytest.mark.asyncio
-    async def test_all_events_result_in_turn(self, events):
-        tui = MagicMock()
-        tui.finish_stream.return_value = ""
-        session = Session()
-        stats = TokenStatistics()
-
-        await handle_stream(_async_iter(events), tui, session, stats)
-
-        # The turn is always added to session
+        await handler.handle_stream(_events_from_list(events))
         history = session.get_history()
         assert len(history) == 1
         assert history[0].role == "assistant"
+        assert history[0].content == "hi"
+
+    @pytest.mark.asyncio
+    async def test_last_response_set(self):
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        events = [
+            StreamEvent(type=StreamEventType.TEXT_DELTA, data={"text": "response"}),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+        tui.set_last_response.assert_called_once_with("response")
+
+    @pytest.mark.asyncio
+    async def test_empty_response_no_last_response(self):
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        await handler.handle_stream(_events_from_list([]))
+        tui.set_last_response.assert_not_called()
+
+
+# --- Property-based tests ---
+
+
+def _event_strategy() -> st.SearchStrategy[StreamEvent]:
+    """Strategy for generating random StreamEvents."""
+    return st.one_of(
+        st.builds(
+            StreamEvent,
+            type=st.just(StreamEventType.TEXT_DELTA),
+            data=st.fixed_dictionaries({"text": st.text(min_size=0, max_size=20)}),
+        ),
+        st.builds(
+            StreamEvent,
+            type=st.just(StreamEventType.TOOL_USE_START),
+            data=st.fixed_dictionaries(
+                {"name": st.text(min_size=1, max_size=10), "id": st.text(min_size=1, max_size=5)}
+            ),
+        ),
+        st.builds(
+            StreamEvent,
+            type=st.just(StreamEventType.TOOL_RESULT),
+            data=st.fixed_dictionaries(
+                {
+                    "name": st.text(min_size=1, max_size=10),
+                    "result": st.text(min_size=0, max_size=20),
+                    "is_error": st.booleans(),
+                }
+            ),
+        ),
+        st.builds(
+            StreamEvent,
+            type=st.just(StreamEventType.USAGE),
+            data=st.fixed_dictionaries(
+                {
+                    "input_tokens": st.integers(min_value=0, max_value=10000),
+                    "output_tokens": st.integers(min_value=0, max_value=10000),
+                }
+            ),
+        ),
+        st.builds(
+            StreamEvent,
+            type=st.just(StreamEventType.ERROR),
+            data=st.fixed_dictionaries(
+                {"message": st.text(min_size=1, max_size=20), "fatal": st.just(False)}
+            ),
+        ),
+    )
+
+
+@pytest.mark.property
+class TestStreamHandlerProperties:
+    @given(
+        events=st.lists(_event_strategy(), min_size=0, max_size=15),
+    )
+    @pytest.mark.asyncio
+    async def test_property19_stream_finalization(self, events: list[StreamEvent]):
+        """Property 19: Any stream produces exactly one ConversationTurn."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        turn = await handler.handle_stream(_events_from_list(events))
+
+        # Exactly one turn produced
+        assert turn is not None
+        assert turn.role == "assistant"
+
+        # Turn was added to session
+        history = session.get_history()
+        assert len(history) == 1
+        assert history[0] is turn
+
+        # Text content is concatenation of all TEXT_DELTA texts
+        expected_text = "".join(
+            e.data.get("text", "")
+            for e in events
+            if e.type == StreamEventType.TEXT_DELTA
+        )
+        assert turn.content == expected_text
+
+        # Tool uses count matches TOOL_RESULT count
+        tool_result_count = sum(
+            1 for e in events if e.type == StreamEventType.TOOL_RESULT
+        )
+        assert len(turn.tool_uses) == tool_result_count

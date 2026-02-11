@@ -1,55 +1,80 @@
-"""Config loader for agent_repl - reads plugin configuration from TOML files."""
-
 from __future__ import annotations
 
-import io
 import logging
 import tomllib
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_CONFIG_TEMPLATE: str = """\
-# Agent Fox configuration
-# See documentation for available options.
+_DEFAULT_TEMPLATE = """\
+# agent_repl configuration file
 
 [plugins]
-modules = []
+# Plugin modules to load (dotted Python paths)
+# paths = [
+#     "myapp.plugins.custom_plugin",
+# ]
+
+# Plugin-specific configuration sections
+# [plugins.custom_plugin]
+# some_key = "some_value"
 """
 
 
-def _parse_default() -> dict:
-    """Parse DEFAULT_CONFIG_TEMPLATE and return the resulting dict."""
-    return tomllib.load(io.BytesIO(DEFAULT_CONFIG_TEMPLATE.encode()))
+@dataclass
+class LoadedConfig:
+    """Result of loading .af/config.toml."""
+
+    plugin_paths: list[str] = field(default_factory=list)
+    raw: dict[str, Any] = field(default_factory=dict)
 
 
-def load_config(config_dir: Path) -> dict:
-    """Load plugin configuration from .af/plugins.toml in the given directory.
+def load_config(path: str = ".af/config.toml") -> LoadedConfig:
+    """Load configuration from a TOML file.
 
-    If the file does not exist, creates it with DEFAULT_CONFIG_TEMPLATE
-    content and returns the parsed default. If the file cannot be created
-    (e.g., permission error), logs a warning and returns the parsed default.
-    If the file exists but is malformed, logs a warning and returns empty dict.
+    - Missing file: create default template, return empty LoadedConfig.
+    - Malformed TOML: log warning, return empty LoadedConfig.
+    - Valid TOML: extract [plugins].paths list, return full raw dict.
+
+    Never raises an exception.
     """
-    config_path = config_dir / ".af" / "plugins.toml"
+    config_path = Path(path)
+
+    if not config_path.exists():
+        _create_default_template(config_path)
+        return LoadedConfig()
 
     try:
-        file_exists = config_path.exists()
-    except OSError:
-        file_exists = False
+        content = config_path.read_bytes()
+    except OSError as e:
+        logger.warning("Failed to read config file %s: %s", path, e)
+        return LoadedConfig()
 
-    if not file_exists:
-        try:
-            config_path.parent.mkdir(parents=True, exist_ok=True)
-            config_path.write_text(DEFAULT_CONFIG_TEMPLATE)
-            logger.info("Created default config at %s", config_path)
-        except OSError as e:
-            logger.warning("Could not create config: %s", e)
-        return _parse_default()
+    if not content:
+        return LoadedConfig()
 
     try:
-        with open(config_path, "rb") as f:
-            return tomllib.load(f)
-    except tomllib.TOMLDecodeError as e:
-        logger.warning("Malformed TOML in %s: %s", config_path, e)
-        return {}
+        raw = tomllib.loads(content.decode("utf-8"))
+    except (tomllib.TOMLDecodeError, UnicodeDecodeError) as e:
+        logger.warning("Malformed TOML in %s: %s", path, e)
+        return LoadedConfig()
+
+    plugin_paths: list[str] = []
+    plugins_section = raw.get("plugins")
+    if isinstance(plugins_section, dict):
+        paths = plugins_section.get("paths")
+        if isinstance(paths, list):
+            plugin_paths = [str(p) for p in paths]
+
+    return LoadedConfig(plugin_paths=plugin_paths, raw=raw)
+
+
+def _create_default_template(config_path: Path) -> None:
+    """Create the default config template, creating parent directories if needed."""
+    try:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(_DEFAULT_TEMPLATE, encoding="utf-8")
+    except OSError as e:
+        logger.warning("Failed to create default config at %s: %s", config_path, e)

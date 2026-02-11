@@ -1,21 +1,26 @@
-"""Custom exception types for agent_repl."""
+class AgentReplError(Exception):
+    """Base exception for all agent_repl errors."""
 
 
-class FileContextError(Exception):
-    """Raised when file context resolution fails (missing path, binary file, etc.)."""
+class AgentError(AgentReplError):
+    """Raised when the agent encounters a failure."""
 
 
-class PluginLoadError(Exception):
-    """Raised when a plugin fails to load."""
+class PluginError(AgentReplError):
+    """Raised on plugin loading or registration errors."""
 
 
-class AgentError(Exception):
-    """Raised when agent interaction fails (connection error, API error, etc.)."""
+class ConfigError(AgentReplError):
+    """Raised on configuration loading errors."""
 
 
-class ConfigError(Exception):
-    """Raised when configuration loading or validation fails."""
+class ClipboardError(AgentReplError):
+    """Raised on clipboard operation failures."""
 
 
-class ClipboardError(Exception):
-    """Raised when a clipboard operation fails (missing utility, subprocess error)."""
+class FileContextError(AgentReplError):
+    """Raised on file context resolution errors."""
+
+
+class QuitRequestedError(AgentReplError):
+    """Sentinel exception raised by /quit to signal REPL exit."""

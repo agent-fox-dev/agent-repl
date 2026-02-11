@@ -1,50 +1,49 @@
-"""Command registry for agent_repl - stores and looks up slash commands."""
-
 from __future__ import annotations
 
 from agent_repl.types import SlashCommand
 
 
 class CommandRegistry:
-    """Registry for slash commands. Stores commands by name and provides lookup."""
+    """Stores SlashCommand objects; supports lookup, listing, prefix completion,
+    and pinned command resolution."""
 
     def __init__(self) -> None:
         self._commands: dict[str, SlashCommand] = {}
 
     def register(self, command: SlashCommand) -> None:
-        """Register a slash command by name."""
+        """Register a command, replacing any existing command with the same name."""
         self._commands[command.name] = command
 
     def get(self, name: str) -> SlashCommand | None:
-        """Look up a command by name. Returns None if not found."""
+        """Look up a command by exact name."""
         return self._commands.get(name)
 
-    def all_commands(self) -> list[SlashCommand]:
-        """Return all registered commands sorted by name."""
+    def list_all(self) -> list[SlashCommand]:
+        """Return all registered commands, sorted alphabetically by name."""
         return sorted(self._commands.values(), key=lambda c: c.name)
 
-    def completions(self, prefix: str) -> list[str]:
-        """Return command names matching the given prefix (for tab completion)."""
+    def complete(self, prefix: str) -> list[SlashCommand]:
+        """Return commands whose names start with the given prefix, sorted alphabetically."""
         return sorted(
-            name for name in self._commands if name.startswith(prefix)
+            (c for c in self._commands.values() if c.name.startswith(prefix)),
+            key=lambda c: c.name,
         )
 
-    def pinned_commands(self, pinned_names: list[str]) -> list[SlashCommand]:
-        """Return pinned commands: first those in pinned_names (in order), then
-        any registered commands with pinned=True not already included."""
-        seen: set[str] = set()
+    def get_pinned(self, pinned_names: list[str], max_count: int) -> list[SlashCommand]:
+        """Return registered commands in pinned order, capped at max_count.
+
+        Only commands that are both in pinned_names and registered are included.
+        Order follows pinned_names order.
+        """
         result: list[SlashCommand] = []
-
+        seen: set[str] = set()
         for name in pinned_names:
-            if name not in seen:
-                cmd = self._commands.get(name)
-                if cmd is not None:
-                    result.append(cmd)
-                    seen.add(name)
-
-        for cmd in self._commands.values():
-            if cmd.pinned and cmd.name not in seen:
+            if len(result) >= max_count:
+                break
+            if name in seen:
+                continue
+            seen.add(name)
+            cmd = self._commands.get(name)
+            if cmd is not None:
                 result.append(cmd)
-                seen.add(cmd.name)
-
         return result

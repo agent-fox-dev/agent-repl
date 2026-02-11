@@ -1,163 +1,142 @@
-"""Unit tests for the config loader module.
+"""Tests for config_loader module.
 
-Validates: Requirements 1.1-1.4, 2.1-2.4, 3.1-3.3, 4.1-4.3
-Correctness Properties: P1-P6
+Covers Requirements 10.10-10.13 and Property 20.
 """
 
-import os
+from __future__ import annotations
+
+import logging
+import tempfile
 from pathlib import Path
 
-from agent_repl.config_loader import DEFAULT_CONFIG_TEMPLATE, load_config
+import pytest
+from hypothesis import given
+from hypothesis import strategies as st
+
+from agent_repl.config_loader import LoadedConfig, load_config
 
 
-class TestLoadConfig:
-    def test_valid_toml(self, tmp_path: Path):
-        af_dir = tmp_path / ".af"
-        af_dir.mkdir()
-        (af_dir / "plugins.toml").write_text(
-            '[plugins]\nmodules = ["my_plugin"]\n'
+class TestValidToml:
+    """Requirement 10.10: Load plugin paths from [plugins] section."""
+
+    def test_load_with_plugins(self, tmp_path: Path):
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[plugins]\npaths = ["myapp.plugins.foo", "myapp.plugins.bar"]\n',
+            encoding="utf-8",
         )
-        result = load_config(tmp_path)
-        assert result == {"plugins": {"modules": ["my_plugin"]}}
+        result = load_config(str(config_file))
+        assert result.plugin_paths == ["myapp.plugins.foo", "myapp.plugins.bar"]
+        assert "plugins" in result.raw
 
-    def test_missing_file_creates_default(self, tmp_path: Path):
-        """Property 1: Default File Creation.
-        Validates: Requirements 1.1, 1.2, 1.3.
-        """
-        result = load_config(tmp_path)
+    def test_load_empty_paths(self, tmp_path: Path):
+        config_file = tmp_path / "config.toml"
+        config_file.write_text("[plugins]\npaths = []\n", encoding="utf-8")
+        result = load_config(str(config_file))
+        assert result.plugin_paths == []
 
-        config_path = tmp_path / ".af" / "plugins.toml"
-        assert result == {"plugins": {"modules": []}}
-        assert config_path.exists()
-        assert config_path.read_text() == DEFAULT_CONFIG_TEMPLATE
+    def test_load_no_plugins_section(self, tmp_path: Path):
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('[other]\nkey = "value"\n', encoding="utf-8")
+        result = load_config(str(config_file))
+        assert result.plugin_paths == []
+        assert result.raw["other"]["key"] == "value"
 
-    def test_missing_dir_creates_default(self, tmp_path: Path):
-        """Validates: Requirement 1.2 — CONFIG_DIR created when missing."""
-        af_dir = tmp_path / ".af"
-        assert not af_dir.exists()
+    def test_load_no_paths_key(self, tmp_path: Path):
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('[plugins]\nother_key = "value"\n', encoding="utf-8")
+        result = load_config(str(config_file))
+        assert result.plugin_paths == []
 
-        load_config(tmp_path)
 
-        assert af_dir.is_dir()
-        assert (af_dir / "plugins.toml").exists()
+class TestPluginSpecificConfig:
+    """Requirement 10.13: Plugin-specific configuration accessible via raw."""
 
-    def test_malformed_toml_returns_empty(self, tmp_path: Path):
-        af_dir = tmp_path / ".af"
-        af_dir.mkdir()
-        (af_dir / "plugins.toml").write_text("this is not valid toml [[[")
-        result = load_config(tmp_path)
-        assert result == {}
-
-    def test_empty_file_returns_empty(self, tmp_path: Path):
-        af_dir = tmp_path / ".af"
-        af_dir.mkdir()
-        (af_dir / "plugins.toml").write_text("")
-        result = load_config(tmp_path)
-        assert result == {}
-
-    def test_toml_with_multiple_sections(self, tmp_path: Path):
-        af_dir = tmp_path / ".af"
-        af_dir.mkdir()
-        (af_dir / "plugins.toml").write_text(
-            '[plugins]\nmodules = ["a", "b"]\n\n[settings]\nkey = "value"\n'
+    def test_plugin_config_accessible(self, tmp_path: Path):
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[plugins]\npaths = []\n\n[plugins.my_plugin]\napi_key = "secret"\n',
+            encoding="utf-8",
         )
-        result = load_config(tmp_path)
-        assert result["plugins"]["modules"] == ["a", "b"]
-        assert result["settings"]["key"] == "value"
+        result = load_config(str(config_file))
+        assert result.raw["plugins"]["my_plugin"]["api_key"] == "secret"
 
 
-class TestDefaultConfigCreation:
-    """Tests for default config file creation and error handling.
+class TestMissingFile:
+    """Requirement 10.11: Missing file creates default template."""
 
-    Validates correctness properties P1-P6.
-    """
+    def test_creates_template(self, tmp_path: Path):
+        config_file = tmp_path / "config.toml"
+        result = load_config(str(config_file))
+        assert isinstance(result, LoadedConfig)
+        assert result.plugin_paths == []
+        assert result.raw == {}
+        assert config_file.exists()
+        content = config_file.read_text(encoding="utf-8")
+        assert "[plugins]" in content
 
-    def test_default_template_is_valid_toml(self):
-        """Property 3: Template Validity.
-        Validates: Requirements 2.2, 2.3, 2.4.
-        """
-        import io
-        import tomllib
+    def test_creates_parent_dirs(self, tmp_path: Path):
+        config_file = tmp_path / "subdir" / "nested" / "config.toml"
+        result = load_config(str(config_file))
+        assert isinstance(result, LoadedConfig)
+        assert config_file.exists()
 
-        result = tomllib.load(io.BytesIO(DEFAULT_CONFIG_TEMPLATE.encode()))
-        assert "plugins" in result
-        assert result["plugins"]["modules"] == []
 
-    def test_existing_file_not_overwritten(self, tmp_path: Path):
-        """Property 4: Existing File Preservation.
-        Validates: Requirements 4.1, 4.3.
-        """
-        af_dir = tmp_path / ".af"
-        af_dir.mkdir()
-        custom_content = '[plugins]\nmodules = ["custom"]\n'
-        (af_dir / "plugins.toml").write_text(custom_content)
+class TestMalformedToml:
+    """Requirement 10.12: Malformed TOML logs warning, returns empty."""
 
-        result = load_config(tmp_path)
+    def test_invalid_toml(self, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+        config_file = tmp_path / "config.toml"
+        config_file.write_text("this is not valid toml [[[", encoding="utf-8")
+        with caplog.at_level(logging.WARNING):
+            result = load_config(str(config_file))
+        assert result.plugin_paths == []
+        assert result.raw == {}
+        assert "Malformed TOML" in caplog.text
 
-        assert (af_dir / "plugins.toml").read_text() == custom_content
-        assert result == {"plugins": {"modules": ["custom"]}}
+    def test_empty_file(self, tmp_path: Path):
+        config_file = tmp_path / "config.toml"
+        config_file.write_text("", encoding="utf-8")
+        result = load_config(str(config_file))
+        assert result.plugin_paths == []
+        assert result.raw == {}
 
-    def test_write_permission_denied(self, tmp_path: Path):
-        """Property 5: Write Error Graceful Degradation.
-        Validates: Requirements 3.1, 3.2, 3.3.
-        """
-        af_dir = tmp_path / ".af"
-        af_dir.mkdir()
-        os.chmod(af_dir, 0o444)
 
-        try:
-            result = load_config(tmp_path)
-            assert result == {"plugins": {"modules": []}}
-        finally:
-            os.chmod(af_dir, 0o755)
+class TestLoadedConfigDefaults:
+    """LoadedConfig dataclass defaults."""
 
-    def test_idempotency(self, tmp_path: Path):
-        """Property 6: Idempotency.
-        Validates: Requirements 1.1, 4.3.
-        """
-        result1 = load_config(tmp_path)
-        config_path = tmp_path / ".af" / "plugins.toml"
-        content_after_first = config_path.read_text()
+    def test_defaults(self):
+        lc = LoadedConfig()
+        assert lc.plugin_paths == []
+        assert lc.raw == {}
 
-        result2 = load_config(tmp_path)
-        content_after_second = config_path.read_text()
 
-        assert result1 == result2
-        assert content_after_first == content_after_second
-        assert content_after_second == DEFAULT_CONFIG_TEMPLATE
+# --- Property-based tests ---
 
-    def test_created_file_is_readable(self, tmp_path: Path):
-        """Property 2: Default Return Value Consistency (round-trip).
-        Create default, then read it back via load_config.
-        """
-        result1 = load_config(tmp_path)
-        result2 = load_config(tmp_path)
 
-        assert result1 == {"plugins": {"modules": []}}
-        assert result1 == result2
+@pytest.mark.property
+class TestConfigLoaderProperties:
+    @given(
+        content=st.one_of(
+            st.just(b""),
+            st.just(b"invalid toml [[["),
+            st.just(b'[plugins]\npaths = ["a", "b"]\n'),
+            st.just(b"[other]\nkey = 1\n"),
+            st.binary(min_size=0, max_size=100),
+        ),
+    )
+    def test_property20_config_file_resilience(self, content: bytes):
+        """Property 20: Never raises for any file state."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_file = Path(tmpdir) / "config.toml"
+            config_file.write_bytes(content)
+            # Must not raise
+            result = load_config(str(config_file))
+            assert isinstance(result, LoadedConfig)
 
-    def test_creation_logs_info(self, tmp_path: Path, caplog):
-        """Validates: Requirement 1.4 — info log on creation."""
-        import logging
-
-        with caplog.at_level(logging.INFO, logger="agent_repl.config_loader"):
-            load_config(tmp_path)
-
-        assert any("Created default config at" in msg for msg in caplog.messages)
-
-    def test_write_error_logs_warning(self, tmp_path: Path, caplog):
-        """Validates: Requirements 3.1, 3.2 — warning log on write error."""
-        import logging
-
-        af_dir = tmp_path / ".af"
-        af_dir.mkdir()
-        os.chmod(af_dir, 0o444)
-
-        try:
-            with caplog.at_level(logging.WARNING, logger="agent_repl.config_loader"):
-                load_config(tmp_path)
-            assert any(
-                "Could not create config" in msg for msg in caplog.messages
-            )
-        finally:
-            os.chmod(af_dir, 0o755)
+    def test_property20_missing_file(self):
+        """Property 20: Missing file does not raise."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_file = Path(tmpdir) / "nonexistent.toml"
+            result = load_config(str(config_file))
+            assert isinstance(result, LoadedConfig)

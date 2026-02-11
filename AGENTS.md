@@ -4,7 +4,7 @@ This file provides instructions for coding agents working on this repository.
 
 ## About the Repo
 
-See `prd.md` for product requirements.
+See `prd.md` for high-level requirements. All specifications in `.specs/{number}_{specification}/` are derieved from this PRD.
 
 ## Spec-Driven Development
 
@@ -30,7 +30,7 @@ Do not implement anything before completing this checklist.
 
 - Implement exactly one task group/subtask per session.
 - Do not start a second task in the same session.
-- If the user requests multiple tasks, complete one task and hand off the rest.
+- If the user requests multiple tasks, complete one task and hand off the rest to the next session.
 - Do not include unrelated "while here" fixes.
 
 ## Workflow and Git Policy
@@ -48,7 +48,6 @@ When implementing a task, update the checkbox states in `.specs/{number}_{specif
 | `- [ ]*` | Not started (optional) |
 | `- [x]`  | Completed              |
 | `- [-]`  | In progress            |
-| `- [~]`  | Queued                 |
 
 ## Documentation Conventions
 

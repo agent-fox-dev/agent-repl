@@ -1,46 +1,50 @@
-"""Plugin registry for agent_repl - manages loaded plugins and routes commands."""
-
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from agent_repl.command_registry import CommandRegistry
-
-if TYPE_CHECKING:
-    from agent_repl.types import AgentPlugin, Plugin
+from agent_repl.exceptions import PluginError
+from agent_repl.types import AgentPlugin, Plugin
 
 
 class PluginRegistry:
-    """Maintains loaded plugins, routes commands, identifies active agent."""
+    """Manages plugin lifecycle; registers commands; enforces single-agent constraint."""
 
-    def __init__(self, command_registry: CommandRegistry) -> None:
+    def __init__(self) -> None:
         self._plugins: list[Plugin] = []
-        self._command_registry = command_registry
-        self._agent_plugin: AgentPlugin | None = None
+        self._active_agent: AgentPlugin | None = None
 
-    def register_plugin(self, plugin: Plugin) -> None:
-        """Register a plugin: store it and route its commands to the command registry."""
+    def register(self, plugin: Plugin, command_registry: CommandRegistry) -> None:
+        """Register a plugin: store it, register its commands, and set as agent if applicable."""
+        for command in plugin.get_commands():
+            command_registry.register(command)
+
+        if isinstance(plugin, AgentPlugin):
+            self.set_agent(plugin)
+
         self._plugins.append(plugin)
 
-        for cmd in plugin.get_commands():
-            self._command_registry.register(cmd)
-
-        # Check if this is an agent plugin (duck typing via hasattr)
-        if hasattr(plugin, "send_message") and hasattr(plugin, "compact_history"):
-            if self._agent_plugin is None:
-                self._agent_plugin = plugin  # type: ignore[assignment]
+    def set_agent(self, agent: AgentPlugin) -> None:
+        """Set the active agent. Raises PluginError if an agent is already set."""
+        if self._active_agent is not None:
+            raise PluginError(
+                f"Cannot register agent '{agent.name}': "
+                f"agent '{self._active_agent.name}' is already active. "
+                f"Only one agent plugin is allowed."
+            )
+        self._active_agent = agent
 
     @property
-    def agent_plugin(self) -> AgentPlugin | None:
-        """Return the active agent plugin (first AgentPlugin found)."""
-        return self._agent_plugin
-
-    @agent_plugin.setter
-    def agent_plugin(self, plugin: AgentPlugin) -> None:
-        """Set the active agent plugin."""
-        self._agent_plugin = plugin
+    def active_agent(self) -> AgentPlugin | None:
+        """Return the active agent plugin, or None if no agent is registered."""
+        return self._active_agent
 
     @property
     def plugins(self) -> list[Plugin]:
-        """Return all loaded plugins."""
+        """Return a copy of the registered plugins list."""
         return list(self._plugins)
+
+    def get_status_hints(self) -> list[str]:
+        """Collect and return status hints from all registered plugins."""
+        hints: list[str] = []
+        for plugin in self._plugins:
+            hints.extend(plugin.get_status_hints())
+        return hints

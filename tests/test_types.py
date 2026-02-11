@@ -1,403 +1,428 @@
-"""Unit tests for core data types."""
+"""Tests for core data types, protocols, and enums."""
 
-from agent_repl.constants import DEFAULT_CLAUDE_MODEL
-from agent_repl.exceptions import (
-    AgentError,
-    ConfigError,
-    FileContextError,
-    PluginLoadError,
-)
+from __future__ import annotations
+
+from collections.abc import AsyncIterator
+from typing import Any
+
+import pytest
+
 from agent_repl.types import (
+    AgentPlugin,
     CommandContext,
     Config,
     ConversationTurn,
-    FileContent,
-    InputType,
-    ParsedInput,
+    FileContext,
+    MessageContext,
+    Plugin,
+    PluginContext,
     SlashCommand,
+    SpawnConfig,
     StreamEvent,
     StreamEventType,
     Theme,
-    TokenStatistics,
     TokenUsage,
+    ToolUse,
 )
 
-# --- Theme tests ---
-
-
-class TestTheme:
-    def test_defaults(self):
-        theme = Theme()
-        assert theme.prompt_color == "green"
-        assert theme.cli_output_color == "dim"
-        assert theme.agent_gutter_color == "blue"
-        assert theme.agent_text_color == ""
-        assert theme.tool_color == "cyan"
-        assert theme.tool_error_color == "red"
-
-    def test_all_fields_are_strings(self):
-        theme = Theme()
-        for field_name in ("prompt_color", "cli_output_color", "agent_gutter_color",
-                           "agent_text_color", "tool_color", "tool_error_color"):
-            value = getattr(theme, field_name)
-            assert isinstance(value, str), f"{field_name} should be a string"
-
-    def test_custom_values(self):
-        theme = Theme(
-            prompt_color="cyan",
-            cli_output_color="yellow",
-            agent_gutter_color="#5f87ff",
-            agent_text_color="bright_white",
-            tool_color="magenta",
-            tool_error_color="bright_red",
-        )
-        assert theme.prompt_color == "cyan"
-        assert theme.cli_output_color == "yellow"
-        assert theme.agent_gutter_color == "#5f87ff"
-        assert theme.agent_text_color == "bright_white"
-        assert theme.tool_color == "magenta"
-        assert theme.tool_error_color == "bright_red"
-
-    def test_importable_from_package(self):
-        from agent_repl import Theme as PublicTheme
-        assert PublicTheme is Theme
-
-
-# --- Config tests ---
-
-
-class TestConfig:
-    def test_required_fields(self):
-        config = Config(
-            app_name="test", app_version="1.0.0", default_model=DEFAULT_CLAUDE_MODEL
-        )
-        assert config.app_name == "test"
-        assert config.app_version == "1.0.0"
-        assert config.default_model == DEFAULT_CLAUDE_MODEL
-
-    def test_defaults(self):
-        config = Config(
-            app_name="test", app_version="1.0.0", default_model=DEFAULT_CLAUDE_MODEL
-        )
-        assert config.agent_factory is None
-        assert config.plugins == []
-
-    def test_custom_agent_factory(self):
-        def factory(c):
-            return None
-
-        config = Config(
-            app_name="test",
-            app_version="1.0.0",
-            default_model=DEFAULT_CLAUDE_MODEL,
-            agent_factory=factory,
-        )
-        assert config.agent_factory is factory
-
-    def test_plugins_list(self):
-        config = Config(
-            app_name="test",
-            app_version="1.0.0",
-            default_model=DEFAULT_CLAUDE_MODEL,
-            plugins=["plugin_a", "plugin_b"],
-        )
-        assert config.plugins == ["plugin_a", "plugin_b"]
-
-    def test_plugins_default_not_shared(self):
-        config1 = Config(app_name="a", app_version="1.0", default_model="m")
-        config2 = Config(app_name="b", app_version="1.0", default_model="m")
-        config1.plugins.append("x")
-        assert config2.plugins == []
-
-    def test_default_theme(self):
-        config = Config(app_name="test", app_version="1.0", default_model="m")
-        assert isinstance(config.theme, Theme)
-        assert config.theme.prompt_color == "green"
-
-    def test_custom_theme(self):
-        custom = Theme(prompt_color="cyan", agent_gutter_color="red")
-        config = Config(app_name="test", app_version="1.0", default_model="m", theme=custom)
-        assert config.theme is custom
-        assert config.theme.prompt_color == "cyan"
-        assert config.theme.agent_gutter_color == "red"
-
-    def test_theme_default_not_shared(self):
-        c1 = Config(app_name="a", app_version="1.0", default_model="m")
-        c2 = Config(app_name="b", app_version="1.0", default_model="m")
-        c1.theme.prompt_color = "red"
-        assert c2.theme.prompt_color == "green"
-
-    def test_pinned_commands_defaults_to_none(self):
-        config = Config(app_name="test", app_version="1.0", default_model="m")
-        assert config.pinned_commands is None
-
-    def test_pinned_commands_explicit_list(self):
-        config = Config(
-            app_name="test", app_version="1.0", default_model="m",
-            pinned_commands=["help", "quit", "status"],
-        )
-        assert config.pinned_commands == ["help", "quit", "status"]
-
-    def test_pinned_commands_empty_list(self):
-        config = Config(
-            app_name="test", app_version="1.0", default_model="m",
-            pinned_commands=[],
-        )
-        assert config.pinned_commands == []
-
-
-# --- TokenUsage tests ---
-
-
-class TestTokenUsage:
-    def test_defaults(self):
-        usage = TokenUsage()
-        assert usage.input_tokens == 0
-        assert usage.output_tokens == 0
-
-    def test_custom_values(self):
-        usage = TokenUsage(input_tokens=100, output_tokens=50)
-        assert usage.input_tokens == 100
-        assert usage.output_tokens == 50
-
-
-# --- TokenStatistics tests ---
-
-
-class TestTokenStatistics:
-    def test_defaults(self):
-        stats = TokenStatistics()
-        assert stats.total_input_tokens == 0
-        assert stats.total_output_tokens == 0
-
-    def test_accumulate_single(self):
-        stats = TokenStatistics()
-        stats.accumulate(TokenUsage(input_tokens=100, output_tokens=50))
-        assert stats.total_input_tokens == 100
-        assert stats.total_output_tokens == 50
-
-    def test_accumulate_multiple(self):
-        stats = TokenStatistics()
-        stats.accumulate(TokenUsage(input_tokens=100, output_tokens=50))
-        stats.accumulate(TokenUsage(input_tokens=200, output_tokens=75))
-        assert stats.total_input_tokens == 300
-        assert stats.total_output_tokens == 125
-
-    def test_accumulate_zero(self):
-        stats = TokenStatistics()
-        stats.accumulate(TokenUsage(input_tokens=0, output_tokens=0))
-        assert stats.total_input_tokens == 0
-        assert stats.total_output_tokens == 0
-
-    def test_accumulate_preserves_existing(self):
-        stats = TokenStatistics(total_input_tokens=50, total_output_tokens=25)
-        stats.accumulate(TokenUsage(input_tokens=10, output_tokens=5))
-        assert stats.total_input_tokens == 60
-        assert stats.total_output_tokens == 30
-
-
-# --- SlashCommand tests ---
-
-
-class TestSlashCommand:
-    def test_construction(self):
-        def handler(ctx):
-            return None
-
-        cmd = SlashCommand(
-            name="help",
-            description="Show help",
-            help_text="Displays all available commands",
-            handler=handler,
-        )
-        assert cmd.name == "help"
-        assert cmd.description == "Show help"
-        assert cmd.help_text == "Displays all available commands"
-        assert cmd.handler is handler
-
-    def test_pinned_defaults_to_false(self):
-        cmd = SlashCommand(
-            name="test", description="d", help_text="", handler=lambda ctx: None
-        )
-        assert cmd.pinned is False
-
-    def test_pinned_explicit_true(self):
-        cmd = SlashCommand(
-            name="test", description="d", help_text="", handler=lambda ctx: None,
-            pinned=True,
-        )
-        assert cmd.pinned is True
-
-    def test_backward_compat_without_pinned(self):
-        """Existing code that creates SlashCommand without pinned still works."""
-        cmd = SlashCommand(
-            name="x", description="y", help_text="z", handler=lambda ctx: None
-        )
-        assert cmd.pinned is False
-
-
-# --- StreamEvent tests ---
-
-
-class TestStreamEvent:
-    def test_text_delta(self):
-        event = StreamEvent(type=StreamEventType.TEXT_DELTA, content="hello")
-        assert event.type == StreamEventType.TEXT_DELTA
-        assert event.content == "hello"
-        assert event.metadata == {}
-
-    def test_usage_with_metadata(self):
-        event = StreamEvent(
-            type=StreamEventType.USAGE,
-            metadata={"input_tokens": 100, "output_tokens": 50},
-        )
-        assert event.type == StreamEventType.USAGE
-        assert event.content == ""
-        assert event.metadata["input_tokens"] == 100
-
-    def test_tool_result(self):
-        event = StreamEvent(
-            type=StreamEventType.TOOL_RESULT,
-            content="result data",
-            metadata={"tool_id": "t1", "is_error": False},
-        )
-        assert event.type == StreamEventType.TOOL_RESULT
-        assert event.content == "result data"
-        assert event.metadata["is_error"] is False
-
-    def test_metadata_default_not_shared(self):
-        e1 = StreamEvent(type=StreamEventType.TEXT_DELTA)
-        e2 = StreamEvent(type=StreamEventType.TEXT_DELTA)
-        e1.metadata["key"] = "val"
-        assert "key" not in e2.metadata
-
-
-# --- StreamEventType tests ---
+# --- StreamEventType enum ---
 
 
 class TestStreamEventType:
-    def test_all_values(self):
+    def test_values(self):
         assert StreamEventType.TEXT_DELTA.value == "text_delta"
         assert StreamEventType.TOOL_USE_START.value == "tool_use_start"
-        assert StreamEventType.TOOL_INPUT_DELTA.value == "tool_input_delta"
         assert StreamEventType.TOOL_RESULT.value == "tool_result"
         assert StreamEventType.USAGE.value == "usage"
         assert StreamEventType.ERROR.value == "error"
 
+    def test_all_members(self):
+        assert len(StreamEventType) == 5
 
-# --- FileContent tests ---
-
-
-class TestFileContent:
-    def test_construction(self):
-        fc = FileContent(path="/tmp/test.py", content="print('hi')")
-        assert fc.path == "/tmp/test.py"
-        assert fc.content == "print('hi')"
+    def test_from_value(self):
+        assert StreamEventType("text_delta") is StreamEventType.TEXT_DELTA
 
 
-# --- ConversationTurn tests ---
+# --- Theme ---
+
+
+class TestTheme:
+    def test_defaults(self):
+        t = Theme()
+        assert t.prompt_color == "green"
+        assert t.gutter_color == "blue"
+        assert t.error_color == "red"
+        assert t.info_color == "cyan"
+
+    def test_custom(self):
+        t = Theme(prompt_color="yellow", gutter_color="magenta")
+        assert t.prompt_color == "yellow"
+        assert t.gutter_color == "magenta"
+
+    def test_frozen(self):
+        t = Theme()
+        with pytest.raises(AttributeError):
+            t.prompt_color = "red"  # type: ignore[misc]
+
+
+# --- StreamEvent ---
+
+
+class TestStreamEvent:
+    def test_creation(self):
+        e = StreamEvent(type=StreamEventType.TEXT_DELTA, data={"text": "hi"})
+        assert e.type is StreamEventType.TEXT_DELTA
+        assert e.data == {"text": "hi"}
+
+    def test_default_data(self):
+        e = StreamEvent(type=StreamEventType.ERROR)
+        assert e.data == {}
+
+    def test_frozen(self):
+        e = StreamEvent(type=StreamEventType.USAGE)
+        with pytest.raises(AttributeError):
+            e.type = StreamEventType.ERROR  # type: ignore[misc]
+
+
+# --- TokenUsage ---
+
+
+class TestTokenUsage:
+    def test_defaults(self):
+        u = TokenUsage()
+        assert u.input_tokens == 0
+        assert u.output_tokens == 0
+
+    def test_custom(self):
+        u = TokenUsage(input_tokens=100, output_tokens=50)
+        assert u.input_tokens == 100
+        assert u.output_tokens == 50
+
+    def test_frozen(self):
+        u = TokenUsage()
+        with pytest.raises(AttributeError):
+            u.input_tokens = 5  # type: ignore[misc]
+
+
+# --- FileContext ---
+
+
+class TestFileContext:
+    def test_with_content(self):
+        fc = FileContext(path="a.py", content="code")
+        assert fc.path == "a.py"
+        assert fc.content == "code"
+        assert fc.error is None
+
+    def test_with_error(self):
+        fc = FileContext(path="b.py", error="File not found")
+        assert fc.path == "b.py"
+        assert fc.content is None
+        assert fc.error == "File not found"
+
+    def test_frozen(self):
+        fc = FileContext(path="c.py")
+        with pytest.raises(AttributeError):
+            fc.path = "d.py"  # type: ignore[misc]
+
+
+# --- ToolUse ---
+
+
+class TestToolUse:
+    def test_defaults(self):
+        tu = ToolUse(name="bash")
+        assert tu.name == "bash"
+        assert tu.input == {}
+        assert tu.result is None
+        assert tu.is_error is False
+
+    def test_with_result(self):
+        tu = ToolUse(name="read", input={"path": "f"}, result="content", is_error=False)
+        assert tu.result == "content"
+
+    def test_with_error(self):
+        tu = ToolUse(name="write", is_error=True, result="Permission denied")
+        assert tu.is_error is True
+        assert tu.result == "Permission denied"
+
+    def test_frozen(self):
+        tu = ToolUse(name="x")
+        with pytest.raises(AttributeError):
+            tu.name = "y"  # type: ignore[misc]
+
+
+# --- ConversationTurn ---
 
 
 class TestConversationTurn:
-    def test_user_turn(self):
-        turn = ConversationTurn(role="user", content="Hello")
-        assert turn.role == "user"
-        assert turn.content == "Hello"
-        assert turn.file_context == []
-        assert turn.tool_uses == []
-        assert turn.token_usage is None
+    def test_minimal(self):
+        t = ConversationTurn(role="user", content="hello")
+        assert t.role == "user"
+        assert t.content == "hello"
+        assert t.file_contexts == []
+        assert t.tool_uses == []
+        assert t.usage is None
 
-    def test_assistant_turn_with_usage(self):
-        usage = TokenUsage(input_tokens=100, output_tokens=50)
-        turn = ConversationTurn(
+    def test_full(self):
+        fc = FileContext(path="a.py", content="code")
+        tu = ToolUse(name="read")
+        usage = TokenUsage(input_tokens=5, output_tokens=10)
+        t = ConversationTurn(
             role="assistant",
-            content="Hi there",
-            token_usage=usage,
+            content="response",
+            file_contexts=[fc],
+            tool_uses=[tu],
+            usage=usage,
         )
-        assert turn.role == "assistant"
-        assert turn.token_usage is usage
+        assert len(t.file_contexts) == 1
+        assert len(t.tool_uses) == 1
+        assert t.usage is not None
+        assert t.usage.input_tokens == 5
 
-    def test_turn_with_file_context(self):
-        fc = FileContent(path="test.py", content="code")
-        turn = ConversationTurn(role="user", content="Check this", file_context=[fc])
-        assert len(turn.file_context) == 1
-        assert turn.file_context[0].path == "test.py"
-
-    def test_defaults_not_shared(self):
-        t1 = ConversationTurn(role="user", content="a")
-        t2 = ConversationTurn(role="user", content="b")
-        t1.file_context.append(FileContent(path="x", content="y"))
-        assert t2.file_context == []
+    def test_mutable(self):
+        t = ConversationTurn(role="user", content="hi")
+        t.content = "updated"
+        assert t.content == "updated"
 
 
-# --- InputType tests ---
+# --- SlashCommand ---
 
 
-class TestInputType:
-    def test_values(self):
-        assert InputType.SLASH_COMMAND.value == "slash_command"
-        assert InputType.FREE_TEXT.value == "free_text"
+class TestSlashCommand:
+    def test_creation(self):
+        async def handler(ctx: CommandContext) -> None:
+            pass
 
+        cmd = SlashCommand(name="help", description="Show help", handler=handler)
+        assert cmd.name == "help"
+        assert cmd.description == "Show help"
+        assert cmd.cli_exposed is False
+        assert cmd.pinned is False
 
-# --- ParsedInput tests ---
+    def test_cli_exposed(self):
+        async def handler(ctx: CommandContext) -> None:
+            pass
 
-
-class TestParsedInput:
-    def test_slash_command(self):
-        parsed = ParsedInput(
-            input_type=InputType.SLASH_COMMAND,
-            raw="/help",
-            command_name="help",
-            command_args="",
+        cmd = SlashCommand(
+            name="compact", description="Compact", handler=handler, cli_exposed=True
         )
-        assert parsed.input_type == InputType.SLASH_COMMAND
-        assert parsed.command_name == "help"
+        assert cmd.cli_exposed is True
 
-    def test_free_text(self):
-        parsed = ParsedInput(
-            input_type=InputType.FREE_TEXT,
-            raw="hello world",
-            at_mentions=["@file.py"],
-        )
-        assert parsed.input_type == InputType.FREE_TEXT
-        assert parsed.at_mentions == ["@file.py"]
+    def test_pinned(self):
+        async def handler(ctx: CommandContext) -> None:
+            pass
 
+        cmd = SlashCommand(name="quit", description="Quit", handler=handler, pinned=True)
+        assert cmd.pinned is True
+
+
+# --- Config ---
+
+
+class TestConfig:
     def test_defaults(self):
-        parsed = ParsedInput(input_type=InputType.FREE_TEXT, raw="hi")
-        assert parsed.command_name is None
-        assert parsed.command_args is None
-        assert parsed.at_mentions == []
+        c = Config()
+        assert c.app_name == "agent_repl"
+        assert c.app_version == "0.1.0"
+        assert isinstance(c.theme, Theme)
+        assert c.agent_factory is None
+        assert c.plugins == []
+        assert c.pinned_commands == ["help", "quit"]
+        assert c.max_pinned_display == 6
+        assert c.max_file_size == 512_000
+        assert c.cli_commands == []
+
+    def test_custom(self):
+        c = Config(app_name="myapp", app_version="2.0.0", max_file_size=1_000_000)
+        assert c.app_name == "myapp"
+        assert c.max_file_size == 1_000_000
+
+    def test_independent_default_lists(self):
+        c1 = Config()
+        c2 = Config()
+        c1.plugins.append("some.plugin")
+        assert c2.plugins == []
 
 
-# --- CommandContext tests ---
+# --- SpawnConfig ---
+
+
+class TestSpawnConfig:
+    def test_minimal(self):
+        sc = SpawnConfig(prompt="do something")
+        assert sc.prompt == "do something"
+        assert sc.pre_hook is None
+        assert sc.post_hook is None
+
+    def test_with_hooks(self):
+        def pre():
+            pass
+
+        def post():
+            pass
+
+        sc = SpawnConfig(prompt="task", pre_hook=pre, post_hook=post)
+        assert sc.pre_hook is pre
+        assert sc.post_hook is post
+
+
+# --- MessageContext ---
+
+
+class TestMessageContext:
+    def test_defaults(self):
+        mc = MessageContext(message="hello")
+        assert mc.message == "hello"
+        assert mc.file_contexts == []
+        assert mc.history == []
+
+    def test_with_context(self):
+        fc = FileContext(path="a.py", content="x")
+        turn = ConversationTurn(role="user", content="hi")
+        mc = MessageContext(message="msg", file_contexts=[fc], history=[turn])
+        assert len(mc.file_contexts) == 1
+        assert len(mc.history) == 1
+
+
+# --- CommandContext ---
 
 
 class TestCommandContext:
-    def test_construction(self):
-        ctx = CommandContext(args="some args", app_context=None)  # type: ignore[arg-type]
-        assert ctx.args == "some args"
+    def test_defaults(self):
+        cc = CommandContext(args="")
+        assert cc.args == ""
+        assert cc.argv == []
+        assert cc.session is None
+        assert cc.tui is None
+        assert isinstance(cc.config, Config)
+        assert cc.registry is None
+        assert cc.plugin_registry is None
+
+    def test_with_argv(self):
+        cc = CommandContext(args="foo bar", argv=["foo", "bar"])
+        assert cc.args == "foo bar"
+        assert cc.argv == ["foo", "bar"]
 
 
-# --- Exception tests ---
+# --- PluginContext ---
 
 
-class TestExceptions:
-    def test_file_context_error(self):
-        err = FileContextError("file not found: /tmp/x")
-        assert str(err) == "file not found: /tmp/x"
-        assert isinstance(err, Exception)
+class TestPluginContext:
+    def test_defaults(self):
+        pc = PluginContext()
+        assert isinstance(pc.config, Config)
+        assert pc.session is None
+        assert pc.tui is None
+        assert pc.registry is None
 
-    def test_plugin_load_error(self):
-        err = PluginLoadError("bad plugin")
-        assert str(err) == "bad plugin"
-        assert isinstance(err, Exception)
 
-    def test_agent_error(self):
-        err = AgentError("connection failed")
-        assert str(err) == "connection failed"
-        assert isinstance(err, Exception)
+# --- Plugin protocol ---
 
-    def test_config_error(self):
-        err = ConfigError("invalid config")
-        assert str(err) == "invalid config"
-        assert isinstance(err, Exception)
+
+class TestPluginProtocol:
+    def test_runtime_checkable(self):
+        class MyPlugin:
+            name = "test"
+            description = "A test plugin"
+
+            def get_commands(self) -> list[SlashCommand]:
+                return []
+
+            async def on_load(self, context: PluginContext) -> None:
+                pass
+
+            async def on_unload(self) -> None:
+                pass
+
+            def get_status_hints(self) -> list[str]:
+                return []
+
+        p = MyPlugin()
+        assert isinstance(p, Plugin)
+
+    def test_non_conforming_not_plugin(self):
+        class NotAPlugin:
+            pass
+
+        assert not isinstance(NotAPlugin(), Plugin)
+
+
+# --- AgentPlugin protocol ---
+
+
+class TestAgentPluginProtocol:
+    def test_runtime_checkable(self):
+        class MyAgent:
+            name = "agent"
+            description = "An agent"
+            default_model = "test-model"
+
+            def get_commands(self) -> list[SlashCommand]:
+                return []
+
+            async def on_load(self, context: PluginContext) -> None:
+                pass
+
+            async def on_unload(self) -> None:
+                pass
+
+            def get_status_hints(self) -> list[str]:
+                return []
+
+            async def send_message(
+                self, context: MessageContext
+            ) -> AsyncIterator[StreamEvent]:
+                yield StreamEvent(type=StreamEventType.TEXT_DELTA, data={"text": "hi"})
+
+            async def compact_history(self, session: Any) -> str:
+                return "summary"
+
+        a = MyAgent()
+        assert isinstance(a, AgentPlugin)
+        assert isinstance(a, Plugin)
+
+    def test_plugin_without_agent_methods(self):
+        class JustAPlugin:
+            name = "basic"
+            description = "Basic"
+
+            def get_commands(self) -> list[SlashCommand]:
+                return []
+
+            async def on_load(self, context: PluginContext) -> None:
+                pass
+
+            async def on_unload(self) -> None:
+                pass
+
+            def get_status_hints(self) -> list[str]:
+                return []
+
+        p = JustAPlugin()
+        assert isinstance(p, Plugin)
+        assert not isinstance(p, AgentPlugin)
+
+
+# --- Public API imports ---
+
+
+class TestPublicAPI:
+    def test_top_level_imports(self):
+        from agent_repl import (
+            AgentPlugin,
+            Config,
+            Plugin,
+            SlashCommand,
+            StreamEvent,
+            StreamEventType,
+            Theme,
+        )
+
+        assert Config is not None
+        assert Theme is not None
+        assert Plugin is not None
+        assert AgentPlugin is not None
+        assert SlashCommand is not None
+        assert StreamEvent is not None
+        assert StreamEventType is not None

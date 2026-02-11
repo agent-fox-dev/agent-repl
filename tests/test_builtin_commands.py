@@ -1,203 +1,324 @@
-"""Unit and property tests for built-in commands.
+"""Tests for builtin_commands module.
 
-Property 14: Version Consistency
-Property 3: Empty-Session Guard (copy_last_output)
-Validates: Requirements 4.1, 4.2, 4.3, 4.4, copy_last_output 1.1-1.5
+Covers Requirements 5.1-5.7, 5.E1-5.E4.
 """
 
-import importlib.metadata
-from unittest.mock import MagicMock, patch
+from __future__ import annotations
+
+from unittest.mock import MagicMock
 
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
 
-from agent_repl.builtin_commands import get_builtin_commands
+from agent_repl.builtin_commands import BuiltinCommandsPlugin
 from agent_repl.command_registry import CommandRegistry
-from agent_repl.exceptions import ClipboardError
+from agent_repl.exceptions import QuitRequestedError
 from agent_repl.session import Session
 from agent_repl.types import (
-    AppContext,
     CommandContext,
     Config,
     ConversationTurn,
-    TokenStatistics,
+    Plugin,
+    TokenUsage,
 )
 
 
-def _make_app_context():
-    """Create a mock AppContext for testing."""
-    config = Config(app_name="test-app", app_version="1.0.0", default_model="test-model")
+@pytest.fixture
+def plugin() -> BuiltinCommandsPlugin:
+    return BuiltinCommandsPlugin()
+
+
+@pytest.fixture
+def registry(plugin: BuiltinCommandsPlugin) -> CommandRegistry:
+    reg = CommandRegistry()
+    for cmd in plugin.get_commands():
+        reg.register(cmd)
+    return reg
+
+
+@pytest.fixture
+def session() -> Session:
+    return Session()
+
+
+@pytest.fixture
+def tui_mock() -> MagicMock:
     tui = MagicMock()
-    session = MagicMock()
-    cmd_reg = CommandRegistry()
-    stats = TokenStatistics()
+    tui.show_info = MagicMock()
+    tui.show_error = MagicMock()
+    tui.copy_to_clipboard = MagicMock()
+    return tui
 
-    for cmd in get_builtin_commands():
-        cmd_reg.register(cmd)
 
-    return AppContext(
-        config=config,
+@pytest.fixture
+def plugin_registry_mock() -> MagicMock:
+    pr = MagicMock()
+    pr.active_agent = None
+    return pr
+
+
+def _make_ctx(
+    registry: CommandRegistry,
+    session: Session,
+    tui: MagicMock,
+    plugin_registry: MagicMock,
+    args: str = "",
+) -> CommandContext:
+    return CommandContext(
+        args=args,
         session=session,
         tui=tui,
-        command_registry=cmd_reg,
-        stats=stats,
+        config=Config(),
+        registry=registry,
+        plugin_registry=plugin_registry,
     )
 
 
-class TestBuiltinCommands:
-    def test_get_builtin_commands_returns_all(self):
-        cmds = get_builtin_commands()
-        names = {c.name for c in cmds}
-        assert names == {"help", "quit", "version", "copy"}
+class TestPluginProtocol:
+    """Requirement 5.7: Built-ins are plugins."""
 
-    def test_help_displays_commands(self):
-        app_ctx = _make_app_context()
-        cmd = app_ctx.command_registry.get("help")
-        assert cmd is not None
-        ctx = CommandContext(args="", app_context=app_ctx)
-        cmd.handler(ctx)
-        app_ctx.tui.display_text.assert_called_once()
-        output = app_ctx.tui.display_text.call_args[0][0]
-        assert "/help" in output
-        assert "/quit" in output
-        assert "/version" in output
+    def test_is_plugin(self, plugin: BuiltinCommandsPlugin):
+        assert isinstance(plugin, Plugin)
 
-    def test_quit_raises_system_exit(self):
-        app_ctx = _make_app_context()
-        cmd = app_ctx.command_registry.get("quit")
-        assert cmd is not None
-        ctx = CommandContext(args="", app_context=app_ctx)
-        with pytest.raises(SystemExit):
-            cmd.handler(ctx)
+    def test_has_name(self, plugin: BuiltinCommandsPlugin):
+        assert plugin.name == "builtin"
 
-    def test_version_displays_version(self):
-        app_ctx = _make_app_context()
-        cmd = app_ctx.command_registry.get("version")
-        assert cmd is not None
-        ctx = CommandContext(args="", app_context=app_ctx)
-        cmd.handler(ctx)
-        app_ctx.tui.display_info.assert_called_once()
-        output = app_ctx.tui.display_info.call_args[0][0]
-        expected_version = importlib.metadata.version("agent_repl")
-        assert expected_version in output
+    def test_has_description(self, plugin: BuiltinCommandsPlugin):
+        assert plugin.description == "Built-in REPL commands"
+
+    def test_get_commands_returns_six(self, plugin: BuiltinCommandsPlugin):
+        commands = plugin.get_commands()
+        assert len(commands) == 6
+        names = {cmd.name for cmd in commands}
+        assert names == {"help", "quit", "version", "copy", "agent", "stats"}
+
+    @pytest.mark.asyncio
+    async def test_on_load(self, plugin: BuiltinCommandsPlugin):
+        # Should not raise
+        await plugin.on_load(MagicMock())
+
+    @pytest.mark.asyncio
+    async def test_on_unload(self, plugin: BuiltinCommandsPlugin):
+        # Should not raise
+        await plugin.on_unload()
+
+    def test_get_status_hints(self, plugin: BuiltinCommandsPlugin):
+        assert plugin.get_status_hints() == []
 
 
-class TestCopyCommand:
-    def _make_ctx_with_session(self, session):
-        """Create a mock AppContext with a real Session."""
-        config = Config(app_name="test-app", app_version="1.0.0", default_model="test-model")
-        tui = MagicMock()
-        cmd_reg = CommandRegistry()
-        stats = TokenStatistics()
-        for cmd in get_builtin_commands():
-            cmd_reg.register(cmd)
-        app_ctx = AppContext(
-            config=config, session=session, tui=tui, command_registry=cmd_reg, stats=stats
+class TestHelp:
+    """Requirement 5.1: /help lists all commands."""
+
+    @pytest.mark.asyncio
+    async def test_help_lists_commands(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        cmd = registry.get("help")
+        await cmd.handler(ctx)
+        # show_info called once per command (6 total)
+        assert tui_mock.show_info.call_count == 6
+        # Check some command names appear
+        all_output = " ".join(call.args[0] for call in tui_mock.show_info.call_args_list)
+        assert "/help" in all_output
+        assert "/quit" in all_output
+        assert "/version" in all_output
+
+    @pytest.mark.asyncio
+    async def test_help_empty_registry(
+        self,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        empty_reg = CommandRegistry()
+        ctx = _make_ctx(empty_reg, session, tui_mock, plugin_registry_mock)
+        # Manually invoke the help handler
+        from agent_repl.builtin_commands import _handle_help
+
+        await _handle_help(ctx)
+        tui_mock.show_info.assert_called_once()
+        assert "No commands" in tui_mock.show_info.call_args[0][0]
+
+
+class TestQuit:
+    """Requirement 5.2: /quit exits REPL."""
+
+    @pytest.mark.asyncio
+    async def test_quit_raises_sentinel(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        cmd = registry.get("quit")
+        with pytest.raises(QuitRequestedError):
+            await cmd.handler(ctx)
+
+
+class TestVersion:
+    """Requirement 5.3: /version shows app name and version."""
+
+    @pytest.mark.asyncio
+    async def test_version_display(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        cmd = registry.get("version")
+        await cmd.handler(ctx)
+        tui_mock.show_info.assert_called_once()
+        output = tui_mock.show_info.call_args[0][0]
+        assert "agent_repl" in output
+        assert "0.1.0" in output
+
+
+class TestCopy:
+    """Requirements 5.4, 5.E1, 5.E2: /copy."""
+
+    @pytest.mark.asyncio
+    async def test_copy_last_response(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        session.add_turn(ConversationTurn(role="assistant", content="Hello world"))
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        cmd = registry.get("copy")
+        await cmd.handler(ctx)
+        tui_mock.copy_to_clipboard.assert_called_once_with("Hello world")
+
+    @pytest.mark.asyncio
+    async def test_copy_no_response(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        """5.E1: No response to copy."""
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        cmd = registry.get("copy")
+        await cmd.handler(ctx)
+        tui_mock.show_info.assert_called_once()
+        assert "No response" in tui_mock.show_info.call_args[0][0]
+        tui_mock.copy_to_clipboard.assert_not_called()
+
+
+class TestAgent:
+    """Requirements 5.5, 5.E3: /agent."""
+
+    @pytest.mark.asyncio
+    async def test_agent_shows_info(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        agent_mock = MagicMock()
+        agent_mock.name = "Claude"
+        agent_mock.default_model = "opus"
+        plugin_registry_mock.active_agent = agent_mock
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        cmd = registry.get("agent")
+        await cmd.handler(ctx)
+        tui_mock.show_info.assert_called_once()
+        output = tui_mock.show_info.call_args[0][0]
+        assert "Claude" in output
+        assert "opus" in output
+
+    @pytest.mark.asyncio
+    async def test_agent_no_agent(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        """5.E3: No agent active."""
+        plugin_registry_mock.active_agent = None
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        cmd = registry.get("agent")
+        await cmd.handler(ctx)
+        tui_mock.show_info.assert_called_once()
+        assert "No agent" in tui_mock.show_info.call_args[0][0]
+
+
+class TestStats:
+    """Requirements 5.6, 5.E4: /stats."""
+
+    @pytest.mark.asyncio
+    async def test_stats_with_usage(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        session.add_turn(
+            ConversationTurn(
+                role="assistant",
+                content="hi",
+                usage=TokenUsage(input_tokens=500, output_tokens=2000),
+            )
         )
-        return app_ctx
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        cmd = registry.get("stats")
+        await cmd.handler(ctx)
+        assert tui_mock.show_info.call_count == 2
+        sent = tui_mock.show_info.call_args_list[0][0][0]
+        received = tui_mock.show_info.call_args_list[1][0][0]
+        assert "500 tokens" in sent
+        assert "2.00 k tokens" in received
 
-    @patch("agent_repl.clipboard.copy_to_clipboard")
-    def test_copy_command_success(self, mock_clipboard):
-        session = Session()
-        session.add_turn(ConversationTurn(role="user", content="question"))
-        session.add_turn(ConversationTurn(role="assistant", content="# Answer\nHello world"))
-        app_ctx = self._make_ctx_with_session(session)
-        cmd = app_ctx.command_registry.get("copy")
-        ctx = CommandContext(args="", app_context=app_ctx)
-        cmd.handler(ctx)
-        mock_clipboard.assert_called_once_with("# Answer\nHello world")
-        app_ctx.tui.display_info.assert_called_once_with("Copied to clipboard.")
+    @pytest.mark.asyncio
+    async def test_stats_zero(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        """5.E4: No tokens exchanged shows zero."""
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        cmd = registry.get("stats")
+        await cmd.handler(ctx)
+        assert tui_mock.show_info.call_count == 2
+        sent = tui_mock.show_info.call_args_list[0][0][0]
+        received = tui_mock.show_info.call_args_list[1][0][0]
+        assert "0 tokens" in sent
+        assert "0 tokens" in received
 
-    def test_copy_command_no_output(self):
-        session = Session()
-        app_ctx = self._make_ctx_with_session(session)
-        cmd = app_ctx.command_registry.get("copy")
-        ctx = CommandContext(args="", app_context=app_ctx)
-        cmd.handler(ctx)
-        app_ctx.tui.display_info.assert_called_once_with("No agent output to copy.")
-
-    @patch(
-        "agent_repl.clipboard.copy_to_clipboard",
-        side_effect=ClipboardError("Clipboard utility not found: pbcopy"),
-    )
-    def test_copy_command_clipboard_error(self, mock_clipboard):
-        session = Session()
-        session.add_turn(ConversationTurn(role="assistant", content="text"))
-        app_ctx = self._make_ctx_with_session(session)
-        cmd = app_ctx.command_registry.get("copy")
-        ctx = CommandContext(args="", app_context=app_ctx)
-        cmd.handler(ctx)
-        app_ctx.tui.display_error.assert_called_once_with(
-            "Clipboard utility not found: pbcopy"
+    @pytest.mark.asyncio
+    async def test_stats_above_1000(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        session.add_turn(
+            ConversationTurn(
+                role="assistant",
+                content="hi",
+                usage=TokenUsage(input_tokens=3210, output_tokens=1500),
+            )
         )
-
-    def test_copy_appears_in_help(self):
-        app_ctx = _make_app_context()
-        cmd = app_ctx.command_registry.get("help")
-        ctx = CommandContext(args="", app_context=app_ctx)
-        cmd.handler(ctx)
-        output = app_ctx.tui.display_text.call_args[0][0]
-        assert "/copy" in output
-
-    def test_copy_command_user_only_history(self):
-        session = Session()
-        session.add_turn(ConversationTurn(role="user", content="hello"))
-        app_ctx = self._make_ctx_with_session(session)
-        cmd = app_ctx.command_registry.get("copy")
-        ctx = CommandContext(args="", app_context=app_ctx)
-        cmd.handler(ctx)
-        app_ctx.tui.display_info.assert_called_once_with("No agent output to copy.")
-
-
-class TestProperty3EmptySessionGuard:
-    """Property 3: For sessions with no assistant turns, the copy handler
-    shall not invoke the clipboard utility.
-
-    Feature: copy_last_output, Property 3: Empty-Session Guard
-    """
-
-    _user_turn_strategy = st.builds(
-        ConversationTurn,
-        role=st.just("user"),
-        content=st.text(min_size=1, max_size=50),
-    )
-
-    @settings(max_examples=50)
-    @given(turns=st.lists(_user_turn_strategy, min_size=0, max_size=10))
-    def test_clipboard_never_called_without_assistant_turns(self, turns):
-        session = Session()
-        for turn in turns:
-            session.add_turn(turn)
-
-        config = Config(app_name="t", app_version="1", default_model="m")
-        tui = MagicMock()
-        cmd_reg = CommandRegistry()
-        stats = TokenStatistics()
-        for cmd in get_builtin_commands():
-            cmd_reg.register(cmd)
-        app_ctx = AppContext(
-            config=config, session=session, tui=tui, command_registry=cmd_reg, stats=stats
-        )
-        cmd = app_ctx.command_registry.get("copy")
-        ctx = CommandContext(args="", app_context=app_ctx)
-
-        with patch("agent_repl.clipboard.copy_to_clipboard") as mock_clip:
-            cmd.handler(ctx)
-            mock_clip.assert_not_called()
-
-
-class TestProperty14VersionConsistency:
-    """Property 14: /version output matches pyproject.toml version.
-
-    Feature: agent_repl, Property 14: Version Consistency
-    """
-
-    def test_version_matches_package_metadata(self):
-        app_ctx = _make_app_context()
-        cmd = app_ctx.command_registry.get("version")
-        ctx = CommandContext(args="", app_context=app_ctx)
-        cmd.handler(ctx)
-        output = app_ctx.tui.display_info.call_args[0][0]
-        pkg_version = importlib.metadata.version("agent_repl")
-        assert pkg_version in output
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        cmd = registry.get("stats")
+        await cmd.handler(ctx)
+        sent = tui_mock.show_info.call_args_list[0][0][0]
+        received = tui_mock.show_info.call_args_list[1][0][0]
+        assert "3.21 k tokens" in sent
+        assert "1.50 k tokens" in received

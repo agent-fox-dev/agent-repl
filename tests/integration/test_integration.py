@@ -1,230 +1,366 @@
-"""Integration tests for BASE_CLI.
+"""Integration tests for agent_repl.
 
-Validates: All requirements
+End-to-end tests verifying the full REPL loop, command dispatch,
+plugin loading, error recovery, and CLI invocation.
 """
 
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from __future__ import annotations
+
+import os
+import tempfile
+from collections.abc import AsyncIterator
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agent_repl.builtin_commands import get_builtin_commands
+from agent_repl.app import App
 from agent_repl.command_registry import CommandRegistry
-from agent_repl.repl import REPLCore
+from agent_repl.plugin_registry import PluginRegistry
+from agent_repl.repl import REPL
 from agent_repl.session import Session
 from agent_repl.types import (
-    AppContext,
+    CommandContext,
     Config,
     ConversationTurn,
+    MessageContext,
+    PluginContext,
     SlashCommand,
     StreamEvent,
     StreamEventType,
-    TokenStatistics,
 )
 
-
-def _make_app_context(tui=None):
-    config = Config(app_name="test", app_version="1.0", default_model="m")
-    session = Session()
-    if tui is None:
-        tui = MagicMock()
-    cmd_reg = CommandRegistry()
-    stats = TokenStatistics()
-    for cmd in get_builtin_commands():
-        cmd_reg.register(cmd)
-    return AppContext(
-        config=config, session=session, tui=tui,
-        command_registry=cmd_reg, stats=stats,
-    )
+# --- Echo Agent for Integration Tests ---
 
 
-def _make_mock_agent(events=None):
-    """Create a mock agent that yields predetermined stream events."""
-    agent = MagicMock()
+class IntegrationEchoAgent:
+    """Minimal echo agent for integration tests."""
 
-    async def mock_send(*args, **kwargs):
-        for event in (events or []):
-            yield event
+    name = "Echo"
+    description = "Integration test echo agent"
+    default_model = "echo-test"
 
-    agent.send_message = mock_send
-    agent.compact_history = AsyncMock(return_value="summary")
-    return agent
+    def get_commands(self) -> list[SlashCommand]:
+        return []
 
+    async def on_load(self, context: PluginContext) -> None:
+        pass
 
-class TestEndToEndREPLFlow:
-    """Start App with mock agent, send free-text, verify streamed output."""
+    async def on_unload(self) -> None:
+        pass
 
-    @pytest.mark.asyncio
-    async def test_free_text_produces_response(self):
-        ctx = _make_app_context()
-        ctx.tui.finish_stream.return_value = "Hello world!"
-        events = [
-            StreamEvent(type=StreamEventType.TEXT_DELTA, content="Hello "),
-            StreamEvent(type=StreamEventType.TEXT_DELTA, content="world!"),
-            StreamEvent(
-                type=StreamEventType.USAGE,
-                metadata={"input_tokens": 10, "output_tokens": 5},
-            ),
-        ]
-        agent = _make_mock_agent(events)
+    def get_status_hints(self) -> list[str]:
+        return []
 
-        input_count = 0
+    async def send_message(
+        self, context: MessageContext
+    ) -> AsyncIterator[StreamEvent]:
+        return self._stream(context)
 
-        async def mock_input():
-            nonlocal input_count
-            input_count += 1
-            if input_count == 1:
-                return "Say hello"
-            raise SystemExit(0)
-
-        ctx.tui.read_input = mock_input
-
-        repl = REPLCore(ctx, agent=agent)
-        await repl.run_loop()
-
-        # Verify streaming API was used
-        ctx.tui.start_stream.assert_called_once()
-        ctx.tui.finish_stream.assert_called_once()
-
-        # Verify history has user + assistant turns
-        history = ctx.session.get_history()
-        assert len(history) == 2
-        assert history[0].role == "user"
-        assert history[1].role == "assistant"
-        assert history[1].content == "Hello world!"
-
-        # Verify token stats
-        assert ctx.stats.total_input_tokens == 10
-        assert ctx.stats.total_output_tokens == 5
-
-
-class TestBuiltinCommandFlow:
-    """Test /help, /version, /quit flows."""
-
-    @pytest.mark.asyncio
-    async def test_help_quit_flow(self):
-        ctx = _make_app_context()
-        input_seq = ["/help", "/quit"]
-        idx = 0
-
-        async def mock_input():
-            nonlocal idx
-            if idx < len(input_seq):
-                val = input_seq[idx]
-                idx += 1
-                return val
-            raise EOFError
-
-        ctx.tui.read_input = mock_input
-        repl = REPLCore(ctx)
-        await repl.run_loop()
-
-        ctx.tui.display_text.assert_called_once()
-        output = ctx.tui.display_text.call_args[0][0]
-        assert "/help" in output
-
-
-class TestFullCompactCycle:
-    """Build multi-turn history, /compact, verify single summary turn."""
-
-    @pytest.mark.asyncio
-    async def test_compact_cycle(self):
-        ctx = _make_app_context()
-        # Pre-populate history
-        ctx.session.add_turn(ConversationTurn(role="user", content="hello"))
-        ctx.session.add_turn(ConversationTurn(role="assistant", content="hi"))
-        ctx.session.add_turn(ConversationTurn(role="user", content="how are you"))
-        ctx.session.add_turn(ConversationTurn(role="assistant", content="good"))
-
-        # Register compact command
-        def handle_compact(cmd_ctx):
-            cmd_ctx.app_context.session.replace_with_summary("Conversation summary")
-            cmd_ctx.app_context.tui.display_info("History compacted.")
-
-        ctx.command_registry.register(
-            SlashCommand(
-                name="compact", description="Compact", help_text="",
-                handler=handle_compact,
-            )
+    async def _stream(
+        self, context: MessageContext
+    ) -> AsyncIterator[StreamEvent]:
+        yield StreamEvent(
+            type=StreamEventType.TEXT_DELTA,
+            data={"text": f"Echo: {context.message}"},
+        )
+        yield StreamEvent(
+            type=StreamEventType.USAGE,
+            data={"input_tokens": 10, "output_tokens": 5},
         )
 
-        repl = REPLCore(ctx)
-        await repl.handle_input("/compact")
-
-        history = ctx.session.get_history()
-        assert len(history) == 1
-        assert history[0].content == "Conversation summary"
+    async def compact_history(self, session: object) -> str:
+        return "Summary"
 
 
-class TestAtMentionFlow:
-    """Create temp files, send input with @path, verify content reaches agent."""
+def _make_tui(*inputs: str | BaseException) -> MagicMock:
+    """Create a mock TUI that returns inputs then raises EOFError."""
+    tui = MagicMock()
+    effects: list[str | BaseException] = list(inputs) + [EOFError()]
+    tui.prompt_input = AsyncMock(side_effect=effects)
+    tui.show_error = MagicMock()
+    tui.show_info = MagicMock()
+    tui.show_markdown = MagicMock()
+    tui.start_spinner = MagicMock()
+    tui.stop_spinner = MagicMock()
+    tui.start_live_text = MagicMock()
+    tui.append_live_text = MagicMock()
+    tui.finalize_live_text = MagicMock()
+    tui.set_last_response = MagicMock()
+    tui.show_tool_result = MagicMock()
+    return tui
+
+
+class TestFullREPLLoop:
+    """Test full REPL loop with echo agent."""
 
     @pytest.mark.asyncio
-    async def test_file_context_included(self, tmp_path: Path):
-        ctx = _make_app_context()
-        ctx.tui.finish_stream.return_value = "ok"
-        test_file = tmp_path / "test.py"
-        test_file.write_text("print('hello')")
+    async def test_send_message_receive_echo_quit(self):
+        """Start → send message → receive echo → /quit."""
+        from agent_repl.builtin_commands import BuiltinCommandsPlugin
+        session = Session()
+        tui = _make_tui("hello world", "/quit")
+        reg = CommandRegistry()
+        pr = PluginRegistry()
+        config = Config()
 
-        received_context = []
+        # Register builtins
+        builtin = BuiltinCommandsPlugin()
+        pr.register(builtin, reg)
 
-        async def capturing_send(message, file_context, history):
-            received_context.extend(file_context)
-            yield StreamEvent(type=StreamEventType.TEXT_DELTA, content="ok")
+        # Register echo agent
+        agent = IntegrationEchoAgent()
+        pr.register(agent, reg)
 
-        agent = MagicMock()
-        agent.send_message = capturing_send
+        repl = REPL(
+            session=session,
+            tui=tui,
+            command_registry=reg,
+            plugin_registry=pr,
+            config=config,
+        )
+        await repl.run()
 
-        repl = REPLCore(ctx, agent=agent)
-        await repl.handle_input(f"explain @{test_file}")
+        # User turn + assistant turn recorded
+        history = session.get_history()
+        assert len(history) == 2
+        assert history[0].role == "user"
+        assert history[0].content == "hello world"
+        assert history[1].role == "assistant"
+        assert "Echo: hello world" in history[1].content
 
-        assert len(received_context) == 1
-        assert received_context[0].content == "print('hello')"
+        # Token stats accumulated
+        assert session.stats.total_input == 10
+        assert session.stats.total_output == 5
+
+
+class TestBuiltinCommandsIntegration:
+    """Test built-in commands in context."""
+
+    @pytest.mark.asyncio
+    async def test_help_command(self):
+        session = Session()
+        tui = _make_tui("/help")
+        reg = CommandRegistry()
+        pr = PluginRegistry()
+
+        from agent_repl.builtin_commands import BuiltinCommandsPlugin
+
+        builtin = BuiltinCommandsPlugin()
+        pr.register(builtin, reg)
+
+        repl = REPL(session=session, tui=tui, command_registry=reg,
+                     plugin_registry=pr, config=Config())
+        await repl.run()
+
+        # show_info called for each command (6 builtins)
+        assert tui.show_info.call_count == 6
+
+    @pytest.mark.asyncio
+    async def test_version_command(self):
+        session = Session()
+        tui = _make_tui("/version")
+        reg = CommandRegistry()
+        pr = PluginRegistry()
+
+        from agent_repl.builtin_commands import BuiltinCommandsPlugin
+
+        builtin = BuiltinCommandsPlugin()
+        pr.register(builtin, reg)
+        config = Config(app_name="testapp", app_version="1.2.3")
+
+        repl = REPL(session=session, tui=tui, command_registry=reg,
+                     plugin_registry=pr, config=config)
+        await repl.run()
+
+        output = tui.show_info.call_args[0][0]
+        assert "testapp" in output
+        assert "1.2.3" in output
+
+    @pytest.mark.asyncio
+    async def test_stats_command(self):
+        session = Session()
+        session.add_turn(ConversationTurn(
+            role="assistant", content="hi",
+            usage=__import__("agent_repl.types", fromlist=["TokenUsage"]).TokenUsage(
+                input_tokens=100, output_tokens=200
+            ),
+        ))
+        tui = _make_tui("/stats")
+        reg = CommandRegistry()
+        pr = PluginRegistry()
+
+        from agent_repl.builtin_commands import BuiltinCommandsPlugin
+
+        builtin = BuiltinCommandsPlugin()
+        pr.register(builtin, reg)
+
+        repl = REPL(session=session, tui=tui, command_registry=reg,
+                     plugin_registry=pr, config=Config())
+        await repl.run()
+
+        assert tui.show_info.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_agent_command(self):
+        session = Session()
+        tui = _make_tui("/agent")
+        reg = CommandRegistry()
+        pr = PluginRegistry()
+        agent = IntegrationEchoAgent()
+        pr.register(agent, reg)
+
+        from agent_repl.builtin_commands import BuiltinCommandsPlugin
+
+        builtin = BuiltinCommandsPlugin()
+        pr.register(builtin, reg)
+
+        repl = REPL(session=session, tui=tui, command_registry=reg,
+                     plugin_registry=pr, config=Config())
+        await repl.run()
+
+        output = tui.show_info.call_args[0][0]
+        assert "Echo" in output
+        assert "echo-test" in output
+
+
+class TestUnknownCommandRecovery:
+    """Test error recovery for unknown commands."""
+
+    @pytest.mark.asyncio
+    async def test_unknown_command_then_valid(self):
+        session = Session()
+        tui = _make_tui("/unknown", "/version")
+        reg = CommandRegistry()
+        pr = PluginRegistry()
+
+        from agent_repl.builtin_commands import BuiltinCommandsPlugin
+
+        builtin = BuiltinCommandsPlugin()
+        pr.register(builtin, reg)
+
+        repl = REPL(session=session, tui=tui, command_registry=reg,
+                     plugin_registry=pr, config=Config())
+        await repl.run()
+
+        # First call: error for unknown, second: version info
+        tui.show_error.assert_called_once()
+        assert "Unknown command" in tui.show_error.call_args[0][0]
+        tui.show_info.assert_called()
+
+
+class TestFileContextIntegration:
+    """Test @path file context injection."""
+
+    @pytest.mark.asyncio
+    async def test_file_mention_resolved(self):
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False
+        ) as f:
+            f.write("file content here")
+            f.flush()
+            tmp_path = f.name
+
+        try:
+            agent = IntegrationEchoAgent()
+            session = Session()
+            tui = _make_tui(f"check @{tmp_path}")
+            reg = CommandRegistry()
+            pr = PluginRegistry()
+            pr.set_agent(agent)
+
+            repl = REPL(session=session, tui=tui, command_registry=reg,
+                         plugin_registry=pr, config=Config())
+            await repl.run()
+
+            # User turn should have file contexts
+            history = session.get_history()
+            user_turn = history[0]
+            assert len(user_turn.file_contexts) > 0
+            assert user_turn.file_contexts[0].path == tmp_path
+        finally:
+            os.unlink(tmp_path)
+
+
+class TestCLIInvocation:
+    """Test CLI command invocation flow."""
+
+    @pytest.mark.asyncio
+    async def test_cli_version(self):
+        config = Config(app_name="testcli", app_version="3.0.0")
+        app = App(config=config)
+        with patch("agent_repl.app.load_config") as mock_lc:
+            mock_lc.return_value = MagicMock(plugin_paths=[])
+            result = await app.run_cli_command("version", [])
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_cli_unknown_command(self):
+        app = App()
+        with patch("agent_repl.app.load_config") as mock_lc:
+            mock_lc.return_value = MagicMock(plugin_paths=[])
+            result = await app.run_cli_command("--nonexistent", [])
+        assert result == 1
 
 
 class TestErrorRecovery:
-    """Trigger agent failure, verify REPL stays alive."""
+    """Test error recovery scenarios."""
 
     @pytest.mark.asyncio
-    async def test_agent_failure_doesnt_crash(self):
-        ctx = _make_app_context()
+    async def test_agent_exception_recovery(self):
+        """Agent failure should not crash the REPL."""
 
-        async def failing_send(*args, **kwargs):
-            raise ConnectionError("network error")
-            yield  # noqa: E501
+        class FailingAgent:
+            name = "Failing"
+            description = "Always fails"
+            default_model = "fail-1.0"
 
-        agent = MagicMock()
-        agent.send_message = failing_send
+            def get_commands(self):
+                return []
 
-        input_seq = ["test message", "/quit"]
-        idx = 0
+            async def on_load(self, ctx):
+                pass
 
-        async def mock_input():
-            nonlocal idx
-            if idx < len(input_seq):
-                val = input_seq[idx]
-                idx += 1
-                return val
-            raise EOFError
+            async def on_unload(self):
+                pass
 
-        ctx.tui.read_input = mock_input
-        repl = REPLCore(ctx, agent=agent)
-        await repl.run_loop()
+            def get_status_hints(self):
+                return []
 
-        # Error was displayed but REPL continued to /quit
-        ctx.tui.display_error.assert_called()
+            async def send_message(self, ctx):
+                raise RuntimeError("agent exploded")
 
+            async def compact_history(self, session):
+                return ""
 
-class TestUnknownCommandFlow:
-    """Enter unregistered /foo, verify error and suggestion."""
+        session = Session()
+        tui = _make_tui("hello", "world")
+        reg = CommandRegistry()
+        pr = PluginRegistry()
+        pr.set_agent(FailingAgent())
+
+        repl = REPL(session=session, tui=tui, command_registry=reg,
+                     plugin_registry=pr, config=Config())
+        await repl.run()
+
+        # Both inputs processed (agent error didn't crash loop)
+        assert tui.prompt_input.call_count == 3  # hello, world, EOFError
+        assert tui.show_error.call_count == 2  # Two agent errors
 
     @pytest.mark.asyncio
-    async def test_unknown_command_error(self):
-        ctx = _make_app_context()
-        repl = REPLCore(ctx)
-        await repl.handle_input("/nonexistent")
+    async def test_command_exception_recovery(self):
+        """Command handler failure should not crash the REPL."""
 
-        ctx.tui.display_error.assert_called_once()
-        msg = ctx.tui.display_error.call_args[0][0]
-        assert "Unknown command" in msg
-        assert "/help" in msg
+        async def bad_handler(ctx: CommandContext) -> None:
+            raise ValueError("bad command")
+
+        session = Session()
+        tui = _make_tui("/bad", "/bad")
+        reg = CommandRegistry()
+        reg.register(SlashCommand(name="bad", description="Bad", handler=bad_handler))
+        pr = PluginRegistry()
+
+        repl = REPL(session=session, tui=tui, command_registry=reg,
+                     plugin_registry=pr, config=Config())
+        await repl.run()
+
+        assert tui.show_error.call_count == 2

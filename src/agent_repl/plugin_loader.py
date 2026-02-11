@@ -1,5 +1,3 @@
-"""Plugin loader for agent_repl - imports and initializes plugin modules."""
-
 from __future__ import annotations
 
 import importlib
@@ -7,29 +5,42 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agent_repl.types import AppContext, Plugin
+    from agent_repl.types import Plugin
 
 logger = logging.getLogger(__name__)
 
 
-def load_plugins(plugin_names: list[str], app_context: AppContext) -> list[Plugin]:
-    """Load plugins by dotted module path.
+def load_plugin(dotted_path: str) -> Plugin | None:
+    """Import a plugin module by dotted path and call its create_plugin() factory.
 
-    Each plugin module must expose a create_plugin() factory function.
-    On import/load failure: log error, skip plugin, continue with remaining.
+    Returns the plugin instance, or None if loading fails for any reason.
+    Failures are logged as warnings but never raised.
     """
-    plugins: list[Plugin] = []
+    try:
+        module = importlib.import_module(dotted_path)
+    except ImportError as e:
+        logger.warning("Failed to import plugin module '%s': %s", dotted_path, e)
+        return None
 
-    for name in plugin_names:
-        try:
-            module = importlib.import_module(name)
-            factory = getattr(module, "create_plugin", None)
-            if factory is None:
-                logger.error("Plugin %s has no create_plugin() function", name)
-                continue
-            plugin = factory()
-            plugins.append(plugin)
-        except Exception:
-            logger.error("Failed to load plugin: %s", name, exc_info=True)
+    factory = getattr(module, "create_plugin", None)
+    if factory is None:
+        logger.warning(
+            "Plugin module '%s' has no create_plugin() factory function", dotted_path
+        )
+        return None
 
-    return plugins
+    if not callable(factory):
+        logger.warning(
+            "Plugin module '%s': create_plugin is not callable", dotted_path
+        )
+        return None
+
+    try:
+        plugin = factory()
+    except Exception as e:
+        logger.warning(
+            "Plugin factory create_plugin() in '%s' raised an error: %s", dotted_path, e
+        )
+        return None
+
+    return plugin

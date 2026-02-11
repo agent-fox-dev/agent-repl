@@ -1,82 +1,97 @@
-"""Echo agent for testing and demonstration without API credentials.
+"""Echo agent plugin for credential-free testing.
 
-Implements the AgentPlugin protocol by echoing user input back as
-StreamEvent objects. Provides /clear and /compact commands.
+This module demonstrates implementing the AgentPlugin protocol with a simple
+echo agent that repeats the user's message back. No external API credentials
+or network access are required.
+
+Usage:
+    from examples.echo_agent import EchoAgentPlugin
+
+    config = Config(agent_factory=EchoAgentPlugin)
+    app = App(config=config)
 """
 
+from __future__ import annotations
+
 from collections.abc import AsyncIterator
+from typing import Any
 
 from agent_repl.types import (
-    AppContext,
-    CommandContext,
-    ConversationTurn,
-    FileContent,
+    MessageContext,
+    PluginContext,
     SlashCommand,
     StreamEvent,
     StreamEventType,
 )
 
 
-class EchoAgent:
-    """Lightweight agent that echoes user input as StreamEvents."""
+class EchoAgentPlugin:
+    """An agent that echoes back the user's message.
 
-    name: str = "echo"
-    description: str = "Echo agent for testing"
+    Implements the full AgentPlugin protocol without requiring any external
+    credentials or network access. Useful for testing and development.
+    """
 
-    def __init__(self) -> None:
-        self._app_context: AppContext | None = None
-
-    async def send_message(
-        self,
-        message: str,
-        file_context: list[FileContent],
-        history: list[ConversationTurn],
-    ) -> AsyncIterator[StreamEvent]:
-        yield StreamEvent(type=StreamEventType.TEXT_DELTA, content=message)
-        yield StreamEvent(
-            type=StreamEventType.USAGE,
-            metadata={
-                "input_tokens": len(message),
-                "output_tokens": len(message),
-            },
-        )
-
-    async def compact_history(
-        self,
-        history: list[ConversationTurn],
-    ) -> str:
-        total_len = sum(len(t.content) for t in history)
-        return f"Summary: {len(history)} turns, {total_len} chars"
+    name: str = "Echo"
+    description: str = "Echo agent for testing (no credentials required)"
+    default_model: str = "echo-1.0"
 
     def get_commands(self) -> list[SlashCommand]:
-        return [
-            SlashCommand(
-                name="clear",
-                description="Clear conversation history",
-                help_text="Reset the conversation history to empty.",
-                handler=self._handle_clear,
-            ),
-            SlashCommand(
-                name="compact",
-                description="Compact conversation history",
-                help_text="Replace history with a summary.",
-                handler=self._handle_compact,
-            ),
-        ]
+        return []
 
-    async def on_load(self, app_context: AppContext) -> None:
-        self._app_context = app_context
+    async def on_load(self, context: PluginContext) -> None:
+        pass
 
     async def on_unload(self) -> None:
         pass
 
-    def _handle_clear(self, ctx: CommandContext) -> None:
-        ctx.app_context.session.clear()
-        ctx.app_context.tui.display_info("Conversation history cleared.")
+    def get_status_hints(self) -> list[str]:
+        return [f"model: {self.default_model}"]
 
-    def _handle_compact(self, ctx: CommandContext) -> None:
-        history = ctx.app_context.session.get_history()
-        total_len = sum(len(t.content) for t in history)
-        summary = f"Summary: {len(history)} turns, {total_len} chars"
-        ctx.app_context.session.replace_with_summary(summary)
-        ctx.app_context.tui.display_info("History compacted.")
+    async def send_message(
+        self, context: MessageContext
+    ) -> AsyncIterator[StreamEvent]:
+        """Echo the user's message back as a stream of events."""
+        return self._echo_stream(context)
+
+    async def _echo_stream(
+        self, context: MessageContext
+    ) -> AsyncIterator[StreamEvent]:
+        """Generate echo response events."""
+        # Include file context info if any
+        parts: list[str] = []
+        for fc in context.file_contexts:
+            if fc.content is not None:
+                parts.append(f"[File: {fc.path} ({len(fc.content)} chars)]")
+            elif fc.error:
+                parts.append(f"[File error: {fc.path}: {fc.error}]")
+
+        # Echo the message
+        echo_text = f"Echo: {context.message}"
+        if parts:
+            echo_text = "\n".join(parts) + "\n\n" + echo_text
+
+        yield StreamEvent(
+            type=StreamEventType.TEXT_DELTA,
+            data={"text": echo_text},
+        )
+
+        # Report usage
+        yield StreamEvent(
+            type=StreamEventType.USAGE,
+            data={
+                "input_tokens": len(context.message.split()),
+                "output_tokens": len(echo_text.split()),
+            },
+        )
+
+    async def compact_history(self, session: Any) -> str:
+        """Return a simple summary string."""
+        history = session.get_history()
+        turn_count = len(history)
+        return f"Session summary: {turn_count} turns exchanged."
+
+
+def create_plugin() -> EchoAgentPlugin:
+    """Factory function for plugin loading."""
+    return EchoAgentPlugin()

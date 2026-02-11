@@ -1,99 +1,102 @@
-"""Built-in slash commands for agent_repl (/help, /quit, /version, /copy)."""
-
 from __future__ import annotations
 
-import importlib.metadata
-
-from agent_repl.types import CommandContext, SlashCommand
-
-
-def create_help_command() -> SlashCommand:
-    """Create the /help command."""
-    return SlashCommand(
-        name="help",
-        description="Show available commands",
-        help_text="Display a list of all available slash commands with descriptions.",
-        handler=_handle_help,
-        pinned=True,
-    )
+from agent_repl.exceptions import QuitRequestedError
+from agent_repl.types import CommandContext, PluginContext, SlashCommand
 
 
-def create_quit_command() -> SlashCommand:
-    """Create the /quit command."""
-    return SlashCommand(
-        name="quit",
-        description="Exit the REPL",
-        help_text="Cancel any running agent request and exit the application.",
-        handler=_handle_quit,
-        pinned=True,
-    )
+class BuiltinCommandsPlugin:
+    """Built-in REPL commands implemented as a plugin."""
+
+    name: str = "builtin"
+    description: str = "Built-in REPL commands"
+
+    def get_commands(self) -> list[SlashCommand]:
+        return [
+            SlashCommand(
+                name="help",
+                description="List all available commands",
+                handler=_handle_help,
+                pinned=True,
+            ),
+            SlashCommand(
+                name="quit",
+                description="Exit the REPL",
+                handler=_handle_quit,
+                pinned=True,
+            ),
+            SlashCommand(
+                name="version",
+                description="Show application version",
+                handler=_handle_version,
+                cli_exposed=True,
+            ),
+            SlashCommand(
+                name="copy",
+                description="Copy last response to clipboard",
+                handler=_handle_copy,
+            ),
+            SlashCommand(
+                name="agent",
+                description="Show active agent info",
+                handler=_handle_agent,
+            ),
+            SlashCommand(
+                name="stats",
+                description="Show token usage statistics",
+                handler=_handle_stats,
+            ),
+        ]
+
+    async def on_load(self, context: PluginContext) -> None:
+        pass
+
+    async def on_unload(self) -> None:
+        pass
+
+    def get_status_hints(self) -> list[str]:
+        return []
 
 
-def create_version_command() -> SlashCommand:
-    """Create the /version command."""
-    return SlashCommand(
-        name="version",
-        description="Show version",
-        help_text="Display the application version.",
-        handler=_handle_version,
-    )
-
-
-def _handle_help(ctx: CommandContext) -> None:
-    """Display all available commands."""
-    commands = ctx.app_context.command_registry.all_commands()
-    lines = ["**Available commands:**\n"]
+async def _handle_help(ctx: CommandContext) -> None:
+    """List all registered commands with descriptions."""
+    commands = ctx.registry.list_all()
+    if not commands:
+        ctx.tui.show_info("No commands registered.")
+        return
     for cmd in commands:
-        lines.append(f"- `/{cmd.name}` — {cmd.description}")
-    ctx.app_context.tui.display_text("\n".join(lines))
+        ctx.tui.show_info(f"  /{cmd.name} — {cmd.description}")
 
 
-def _handle_quit(ctx: CommandContext) -> None:
+async def _handle_quit(ctx: CommandContext) -> None:
     """Exit the REPL."""
-    raise SystemExit(0)
+    raise QuitRequestedError()
 
 
-def _handle_version(ctx: CommandContext) -> None:
-    """Display the application version."""
-    version = importlib.metadata.version("agent_repl")
-    app_name = ctx.app_context.config.app_name
-    ctx.app_context.tui.display_info(f"{app_name} v{version}")
+async def _handle_version(ctx: CommandContext) -> None:
+    """Display application name and version."""
+    ctx.tui.show_info(f"{ctx.config.app_name} v{ctx.config.app_version}")
 
 
-def create_copy_command() -> SlashCommand:
-    """Create the /copy command."""
-    return SlashCommand(
-        name="copy",
-        description="Copy last agent output to clipboard",
-        help_text="Copy the most recent agent response (raw markdown) to the system clipboard.",
-        handler=_handle_copy,
-    )
-
-
-def _handle_copy(ctx: CommandContext) -> None:
-    """Copy the last agent output to the system clipboard."""
-    from agent_repl.clipboard import copy_to_clipboard
-    from agent_repl.exceptions import ClipboardError
-
-    text = ctx.app_context.session.get_last_assistant_content()
-    if text is None:
-        ctx.app_context.tui.display_info("No agent output to copy.")
+async def _handle_copy(ctx: CommandContext) -> None:
+    """Copy last assistant response to clipboard."""
+    response = ctx.session.last_assistant_response()
+    if response is None:
+        ctx.tui.show_info("No response to copy.")
         return
+    ctx.tui.copy_to_clipboard(response)
 
-    try:
-        copy_to_clipboard(text)
-    except ClipboardError as e:
-        ctx.app_context.tui.display_error(str(e))
+
+async def _handle_agent(ctx: CommandContext) -> None:
+    """Show active agent name and model."""
+    agent = ctx.plugin_registry.active_agent
+    if agent is None:
+        ctx.tui.show_info("No agent active.")
         return
+    ctx.tui.show_info(f"Agent: {agent.name} (model: {agent.default_model})")
 
-    ctx.app_context.tui.display_info("Copied to clipboard.")
 
-
-def get_builtin_commands() -> list[SlashCommand]:
-    """Return all built-in commands."""
-    return [
-        create_help_command(),
-        create_quit_command(),
-        create_version_command(),
-        create_copy_command(),
-    ]
+async def _handle_stats(ctx: CommandContext) -> None:
+    """Show token usage statistics."""
+    stats = ctx.session.stats
+    ctx.tui.show_info(f"Sent: {stats.format_input()}")
+    ctx.tui.show_info(f"Received: {stats.format_output()}")

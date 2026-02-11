@@ -1,127 +1,121 @@
-"""REPL core for agent_repl - main read-eval-print loop."""
-
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import TYPE_CHECKING
 
-from agent_repl.file_context import resolve_file_context
-from agent_repl.input_parser import parse_input
-from agent_repl.stream_handler import handle_stream
-from agent_repl.types import (
-    CommandContext,
-    ConversationTurn,
-    InputType,
-)
+from agent_repl.exceptions import QuitRequestedError
+from agent_repl.file_context import resolve_mentions
+from agent_repl.input_parser import ParsedCommand, ParsedFreeText, parse_input
+from agent_repl.stream_handler import StreamHandler
+from agent_repl.types import CommandContext, ConversationTurn, MessageContext
 
 if TYPE_CHECKING:
-    from agent_repl.types import AppContext
+    from agent_repl.command_registry import CommandRegistry
+    from agent_repl.plugin_registry import PluginRegistry
+    from agent_repl.session import Session
+    from agent_repl.tui import TUIShell
+    from agent_repl.types import Config
 
 logger = logging.getLogger(__name__)
 
 
-class REPLCore:
-    """Main REPL loop - reads input, dispatches to commands or agent."""
+class REPL:
+    """Main read-eval-print loop.
 
-    def __init__(self, app_context: AppContext, agent: object | None = None) -> None:
-        self._ctx = app_context
-        self._agent = agent
-        self._agent_task: asyncio.Task | None = None  # type: ignore[type-arg]
-        self._running = False
+    Reads user input, classifies it as a slash command or free text,
+    dispatches accordingly, and handles errors gracefully.
+    """
 
-    async def run_loop(self) -> None:
-        """Run the main REPL loop until exit."""
-        self._running = True
+    def __init__(
+        self,
+        session: Session,
+        tui: TUIShell,
+        command_registry: CommandRegistry,
+        plugin_registry: PluginRegistry,
+        config: Config,
+    ) -> None:
+        self._session = session
+        self._tui = tui
+        self._command_registry = command_registry
+        self._plugin_registry = plugin_registry
+        self._config = config
+        self._stream_handler = StreamHandler(tui, session)
 
-        while self._running:
+    async def run(self) -> None:
+        """Run the REPL loop until exit."""
+        while True:
             try:
-                raw_input = await self._ctx.tui.read_input()
-                await self.handle_input(raw_input)
-            except (EOFError, KeyboardInterrupt):
-                # Ctrl+C or Ctrl+D with no agent running -> exit
-                if self._agent_task is None or self._agent_task.done():
-                    self._running = False
-                else:
-                    await self.cancel_agent()
-            except SystemExit:
-                self._running = False
+                raw = await self._tui.prompt_input()
+            except (KeyboardInterrupt, EOFError):
+                break
 
-    async def handle_input(self, raw_input: str) -> None:
-        """Parse and dispatch a single input."""
-        parsed = parse_input(raw_input)
+            parsed = parse_input(raw)
+            if parsed is None:
+                continue
 
-        if parsed.input_type == InputType.SLASH_COMMAND:
-            await self._dispatch_command(parsed.command_name or "", parsed.command_args or "")
-        else:
-            await self._dispatch_free_text(parsed.raw, parsed.at_mentions)
+            try:
+                if isinstance(parsed, ParsedCommand):
+                    await self._handle_command(parsed)
+                elif isinstance(parsed, ParsedFreeText):
+                    await self._handle_free_text(parsed)
+            except QuitRequestedError:
+                break
 
-    async def _dispatch_command(self, name: str, args: str) -> None:
-        """Look up and execute a slash command."""
-        cmd = self._ctx.command_registry.get(name)
+    async def _handle_command(self, parsed: ParsedCommand) -> None:
+        """Dispatch a slash command to its registered handler."""
+        cmd = self._command_registry.get(parsed.name)
         if cmd is None:
-            self._ctx.tui.display_error(
-                f"Unknown command: /{name}. "
-                "Type /help to see available commands, "
-                "or press Enter to forward this to the agent."
-            )
+            self._tui.show_error(f"Unknown command: /{parsed.name}")
             return
 
+        ctx = CommandContext(
+            args=parsed.args,
+            session=self._session,
+            tui=self._tui,
+            config=self._config,
+            registry=self._command_registry,
+            plugin_registry=self._plugin_registry,
+        )
         try:
-            ctx = CommandContext(args=args, app_context=self._ctx)
-            result = cmd.handler(ctx)
-            # Support async handlers
-            if asyncio.iscoroutine(result):
-                await result
-        except SystemExit:
+            await cmd.handler(ctx)
+        except QuitRequestedError:
             raise
         except Exception as e:
-            self._ctx.tui.display_error(f"Command /{name} failed: {e}")
+            self._tui.show_error(f"Command error: {e}")
 
-    async def _dispatch_free_text(self, text: str, at_mentions: list[str]) -> None:
-        """Resolve file context and send to agent."""
-        if not text.strip():
+    async def _handle_free_text(self, parsed: ParsedFreeText) -> None:
+        """Forward free text to the active agent."""
+        agent = self._plugin_registry.active_agent
+        if agent is None:
+            self._tui.show_error("No agent configured.")
             return
 
-        if self._agent is None or not hasattr(self._agent, "send_message"):
-            self._ctx.tui.display_error("No agent configured.")
-            return
-
-        # Resolve file context from @mentions
-        file_context = []
-        if at_mentions:
-            try:
-                file_context = resolve_file_context(at_mentions)
-            except Exception as e:
-                self._ctx.tui.display_error(str(e))
-                return
-
-        # Add user turn to session
-        user_turn = ConversationTurn(
-            role="user",
-            content=text,
-            file_context=file_context,
+        # Resolve @path mentions
+        file_contexts = resolve_mentions(
+            parsed.mentions, self._config.max_file_size
         )
-        self._ctx.session.add_turn(user_turn)
 
-        # Send to agent and handle stream
+        # Build message context
+        msg_ctx = MessageContext(
+            message=parsed.text,
+            file_contexts=file_contexts,
+            history=self._session.get_history(),
+        )
+
+        # Record user turn
+        self._session.add_turn(
+            ConversationTurn(
+                role="user",
+                content=parsed.text,
+                file_contexts=file_contexts,
+            )
+        )
+
+        # Send to agent and stream response
         try:
-            history = self._ctx.session.get_history()
-            stream = self._agent.send_message(text, file_context, history)  # type: ignore[union-attr]
-
-            self._agent_task = asyncio.current_task()
-            await handle_stream(stream, self._ctx.tui, self._ctx.session, self._ctx.stats)
-        except asyncio.CancelledError:
-            self._ctx.tui.stop_spinner()
-            self._ctx.tui.display_info("Agent request cancelled.")
+            stream = await agent.send_message(msg_ctx)
+            await self._stream_handler.handle_stream(stream)
+        except KeyboardInterrupt:
+            self._tui.show_info("Cancelled.")
         except Exception as e:
-            self._ctx.tui.stop_spinner()
-            self._ctx.tui.display_error(f"Agent error: {e}")
-        finally:
-            self._agent_task = None
-
-    async def cancel_agent(self) -> None:
-        """Cancel the currently running agent task."""
-        if self._agent_task is not None and not self._agent_task.done():
-            self._agent_task.cancel()
-            self._ctx.tui.stop_spinner()
+            self._tui.show_error(f"Agent error: {e}")

@@ -1,62 +1,110 @@
-# agent_repl Example Application
+# agent_repl Examples
 
-A self-contained demonstration of the `agent_repl` framework's consumer API.
+## Echo Agent Demo
 
-## Prerequisites
-
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/) package manager
-
-## Setup
-
-From the project root:
+Run the interactive REPL with the echo agent (no credentials required):
 
 ```bash
-uv sync
+uv run python -m examples.demo
 ```
 
-## Usage
+The echo agent repeats your messages back. Try these commands in the REPL:
 
-### Default Mode (Claude Agent)
+- Type any text to send it to the echo agent
+- `@somefile.py hello` to include file context
+- `/help` to list all commands
+- `/greet Alice` to run a custom plugin command
+- `/time` to show the current time
+- `/stats` to see token usage
+- `/quit` to exit
 
-Requires an `ANTHROPIC_API_KEY` environment variable (or equivalent auth
-such as `CLAUDE_CODE_USE_VERTEX`):
+## Claude Agent Demo
+
+Run with the Claude agent (requires `ANTHROPIC_API_KEY`):
 
 ```bash
-uv run python examples/demo.py
+export ANTHROPIC_API_KEY=your-key-here
+uv run python -m examples.demo --claude
 ```
 
-If no credentials are present, the app starts gracefully with built-in
-commands only.
+## CLI Invocation
 
-### Echo Mode (No API Key Needed)
-
-Uses a lightweight echo agent that mirrors your input back:
+Run a slash command from the shell without entering the REPL:
 
 ```bash
-uv run python examples/demo.py --echo
+uv run python -m examples.demo --version
 ```
 
-## Files
+## Session Spawning
 
-| File | Description |
-|---|---|
-| `demo.py` | Entry-point script. Creates `Config`, instantiates `App`, calls `run()`. Supports `--echo` flag. |
-| `demo_plugin.py` | Custom plugin implementing the `Plugin` protocol. Registers `/greet` and `/stats` commands. Exposes `create_plugin()` factory. |
-| `echo_agent.py` | Lightweight `AgentPlugin` that echoes user input as `StreamEvent`s. Provides `/clear` and `/compact` commands. |
-| `__init__.py` | Empty init file making the `examples/` directory importable for tests. |
+Run the spawn demo to see independent agent sessions with hooks:
 
-## Available Commands
+```bash
+uv run python -m examples.spawn_demo
+```
 
-| Command | Source | Pinned | Description |
-|---|---|---|---|
-| `/help` | Built-in | Yes | List all available commands |
-| `/version` | Built-in | No | Show app name and version |
-| `/quit` | Built-in | Yes | Exit the application |
-| `/greet` | Demo plugin | Yes | Display a greeting message |
-| `/stats` | Demo plugin | No | Show session token usage statistics |
-| `/clear` | Echo agent | No | Clear conversation history |
-| `/compact` | Echo agent | No | Replace history with a summary |
+In the REPL, use `/spawn Say something` to spawn a background session.
 
-Pinned commands appear in the completion dropdown when you type `/`.
-Non-pinned commands are accessible by typing more characters (e.g., `/st` for `/stats`).
+## File Structure
+
+- `echo_agent.py` - Echo agent plugin (implements `AgentPlugin` protocol)
+- `demo_plugin.py` - Custom plugin with `/greet` and `/time` commands
+- `demo.py` - Main demo application entry point
+- `spawn_demo.py` - Session spawning demo
+
+## Creating Custom Plugins
+
+A plugin implements the `Plugin` protocol:
+
+```python
+from agent_repl.types import PluginContext, SlashCommand, CommandContext
+
+class MyPlugin:
+    name = "my_plugin"
+    description = "My custom plugin"
+
+    def get_commands(self) -> list[SlashCommand]:
+        return [
+            SlashCommand(
+                name="mycmd",
+                description="My command",
+                handler=my_handler,
+            ),
+        ]
+
+    async def on_load(self, context: PluginContext) -> None:
+        pass
+
+    async def on_unload(self) -> None:
+        pass
+
+    def get_status_hints(self) -> list[str]:
+        return []
+
+async def my_handler(ctx: CommandContext) -> None:
+    ctx.tui.show_info("Hello from my plugin!")
+```
+
+## Creating Custom Agents
+
+An agent implements the `AgentPlugin` protocol (extends `Plugin`):
+
+```python
+from agent_repl.types import MessageContext, StreamEvent, StreamEventType
+
+class MyAgent:
+    name = "MyAgent"
+    description = "My custom agent"
+    default_model = "my-model-1.0"
+
+    # ... Plugin methods ...
+
+    async def send_message(self, context: MessageContext):
+        yield StreamEvent(
+            type=StreamEventType.TEXT_DELTA,
+            data={"text": "Response text here"},
+        )
+
+    async def compact_history(self, session) -> str:
+        return "Compacted summary"
+```

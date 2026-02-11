@@ -1,58 +1,74 @@
-"""Demo plugin for agent_repl showcasing custom slash commands.
+"""Demo plugin with custom slash commands.
 
-Implements the Plugin protocol with /greet and /stats commands.
-Exposes a create_plugin() factory function at module level.
+This module demonstrates creating a Plugin that registers custom slash
+commands. It shows how to use get_commands(), on_load(), and
+get_status_hints().
+
+Usage:
+    Register via Config.plugins or load manually:
+
+    plugin = DemoPlugin()
+    await plugin.on_load(plugin_ctx)
+    plugin_registry.register(plugin, command_registry)
 """
 
-from agent_repl.types import AppContext, CommandContext, SlashCommand
+from __future__ import annotations
+
+import datetime
+
+from agent_repl.types import CommandContext, PluginContext, SlashCommand
 
 
 class DemoPlugin:
-    """Example plugin that registers /greet and /stats commands."""
+    """Example plugin that adds /greet and /time commands."""
 
     name: str = "demo"
-    description: str = "Example plugin for agent_repl"
+    description: str = "Demo plugin with example commands"
 
     def __init__(self) -> None:
-        self._app_context: AppContext | None = None
+        self._loaded = False
 
     def get_commands(self) -> list[SlashCommand]:
         return [
             SlashCommand(
                 name="greet",
-                description="Display a greeting message",
-                help_text="Shows a greeting including the app name.",
-                handler=self._handle_greet,
-                pinned=True,
+                description="Greet the user with a friendly message",
+                handler=_handle_greet,
             ),
             SlashCommand(
-                name="stats",
-                description="Display token usage statistics",
-                help_text="Shows current session token counts.",
-                handler=self._handle_stats,
+                name="time",
+                description="Show the current date and time",
+                handler=_handle_time,
             ),
         ]
 
-    async def on_load(self, app_context: AppContext) -> None:
-        self._app_context = app_context
+    async def on_load(self, context: PluginContext) -> None:
+        """Called when the plugin is loaded. Use for initialization."""
+        self._loaded = True
 
     async def on_unload(self) -> None:
-        pass
+        """Called when the plugin is unloaded. Use for cleanup."""
+        self._loaded = False
 
-    def _handle_greet(self, ctx: CommandContext) -> None:
-        app_name = ctx.app_context.config.app_name
-        ctx.app_context.tui.display_text(
-            f"Hello from {app_name}! Welcome to the demo."
-        )
+    def get_status_hints(self) -> list[str]:
+        """Return status hints displayed in the toolbar."""
+        if self._loaded:
+            return ["demo: active"]
+        return []
 
-    def _handle_stats(self, ctx: CommandContext) -> None:
-        stats = ctx.app_context.stats
-        ctx.app_context.tui.display_info(
-            f"Token usage — input: {stats.total_input_tokens}, "
-            f"output: {stats.total_output_tokens}"
-        )
+
+async def _handle_greet(ctx: CommandContext) -> None:
+    """Handle /greet command."""
+    name = ctx.args.strip() if ctx.args.strip() else "World"
+    ctx.tui.show_info(f"Hello, {name}! Welcome to agent_repl.")
+
+
+async def _handle_time(ctx: CommandContext) -> None:
+    """Handle /time command."""
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ctx.tui.show_info(f"Current time: {now}")
 
 
 def create_plugin() -> DemoPlugin:
-    """Factory function for plugin discovery."""
+    """Factory function for plugin loading via dotted path."""
     return DemoPlugin()

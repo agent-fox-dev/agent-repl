@@ -1,5 +1,3 @@
-"""agent_repl - A REPL-style TUI framework for interacting with AI agents."""
-
 from agent_repl.app import App
 from agent_repl.types import (
     AgentPlugin,
