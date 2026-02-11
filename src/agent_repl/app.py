@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from agent_repl.builtin_commands import BuiltinCommandsPlugin
@@ -10,8 +11,9 @@ from agent_repl.plugin_loader import load_plugin
 from agent_repl.plugin_registry import PluginRegistry
 from agent_repl.repl import REPL
 from agent_repl.session import Session
+from agent_repl.session_spawner import SessionSpawner
 from agent_repl.tui import TUIShell
-from agent_repl.types import Config, PluginContext
+from agent_repl.types import Config, PluginContext, SpawnConfig
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,7 @@ class App:
         self._tui = TUIShell(self._config)
         self._command_registry = CommandRegistry()
         self._plugin_registry = PluginRegistry()
+        self._spawner: SessionSpawner | None = None
 
     async def _setup(self) -> None:
         """Load plugins, create agent, set up completer and toolbar."""
@@ -76,6 +79,10 @@ class App:
         # 6. Set up toolbar provider
         self._tui.set_toolbar_provider(self._plugin_registry.get_status_hints)
 
+        # 7. Set up session spawner if agent_factory is available
+        if self._config.agent_factory is not None:
+            self._spawner = SessionSpawner(self._config.agent_factory)
+
     async def run(self) -> None:
         """Run the application: setup, banner, REPL."""
         await self._setup()
@@ -99,3 +106,10 @@ class App:
             config=self._config,
         )
         await repl.run()
+
+    async def spawn_session(self, config: SpawnConfig) -> asyncio.Task[None]:
+        """Spawn an independent agent session as a background task."""
+        if self._spawner is None:
+            raise RuntimeError("No agent_factory configured; cannot spawn sessions")
+        task: asyncio.Task[None] = asyncio.create_task(self._spawner.spawn(config))
+        return task
