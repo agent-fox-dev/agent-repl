@@ -221,7 +221,26 @@ This enables scripting and automation workflows where individual slash commands
 are useful as standalone operations (e.g. clearing history, compacting context,
 exporting state) without requiring an interactive session.
 
-### 15. Public API
+### 15. Canonical Example Application
+
+The library must include a canonical example application that serves as the
+primary reference for developers integrating agent_repl into their own projects.
+The example should be thoroughly documented -- with inline comments, docstrings,
+and an accompanying README -- and demonstrate all major aspects of the library:
+
+- Creating and configuring an `App` with a `Config` and `Theme`.
+- Implementing a custom `AgentPlugin` (connecting to an agent, streaming
+  responses as `StreamEvent` objects).
+- Registering custom slash commands via a plugin.
+- Using `@path` file context mentions.
+- Spawning an independent agent session with pre- and post-hooks.
+- CLI invocation of a slash command (`APP --slashCommand ...`).
+
+The example should be runnable out of the box (given valid agent credentials)
+and structured so that a developer can copy it as a starting point for their own
+application.
+
+### 16. Public API
 
 The `agent_repl` package exports a clean surface from its top-level
 `__init__.py`:
@@ -252,6 +271,23 @@ The `agent_repl` package exports a clean surface from its top-level
     async input, key bindings, history, and Tab completion.
   - [claude-code-sdk](https://github.com/anthropics/claude-code-sdk-python) --
     client library for the default Claude agent integration.
+
+## Development Environment
+
+- **Package / environment manager**: [uv](https://github.com/astral-sh/uv) is
+  the standard tool for managing virtual environments, dependency resolution,
+  and lockfiles. All contributor and CI workflows should use `uv` rather than
+  pip/venv directly.
+- **Makefile**: The repository includes a `Makefile` with at least the following
+  targets:
+
+  | Target | Purpose |
+  |--------|---------|
+  | `make build` | Build the library (wheel / sdist). |
+  | `make test` | Run the full test suite. |
+  | `make lint` | Run linters / type checkers. |
+  | `make package` | Package the library for distribution (e.g. to PyPI). |
+  | `make clean` | Remove build artifacts, `__pycache__`, `.pyc` files, egg-info, dist, etc. |
 
 ## Non-Functional Considerations
 
