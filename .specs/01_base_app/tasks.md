@@ -733,15 +733,15 @@ session.
 
 <!-- SESSION BOUNDARY: Task group 17 is complete. All implementation is done. -->
 
-- [ ] 18. Final Checkpoint - Release Ready
-  - [ ] All tests pass: `uv run pytest tests/ -q`
-  - [ ] Linter clean: `uv run ruff check src/ tests/ examples/`
-  - [ ] Build succeeds: `make build`
-  - [ ] Package succeeds: `make package`
-  - [ ] All 20 correctness properties have passing tests
-  - [ ] All 16 requirements have traced implementations and tests
-  - [ ] README.md and examples/README.md are complete
-  - [ ] Clean git status on `develop` branch
+- [x] 18. Final Checkpoint - Release Ready
+  - [x] All tests pass: `uv run pytest tests/ -q` (410 passed)
+  - [x] Linter clean: `uv run ruff check src/ tests/ examples/`
+  - [x] Build succeeds: `make build` (agent_repl-0.1.0.tar.gz + .whl)
+  - [x] Package succeeds: `make package` (agent_repl-0.1.0.tar.gz + .whl)
+  - [x] All 20 correctness properties have passing tests (19 @property + 2 Hypothesis)
+  - [x] All 16 requirements have traced implementations and tests
+  - [x] README.md and examples/README.md are complete
+  - [x] Clean git status on `develop` branch
 
 ### Checkbox States
 
