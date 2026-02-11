@@ -26,15 +26,15 @@ session.
 
 ## Tasks
 
-- [ ] 1. Project Scaffolding + Core Types
-  - [ ] 1.1 Initialize project structure
+- [x] 1. Project Scaffolding + Core Types
+  - [x] 1.1 Initialize project structure
     - Create `src/agent_repl/` package with `__init__.py`, `py.typed`
     - Create `src/agent_repl/agents/__init__.py`
     - Create `tests/__init__.py`, `tests/integration/__init__.py`
     - Create `tests/conftest.py` with shared fixtures
     - _Requirements: 15.1, 15.2, 16.5_
 
-  - [ ] 1.2 Create `pyproject.toml`
+  - [x] 1.2 Create `pyproject.toml`
     - Project name `agent_repl`, version `0.1.0`, requires-python `>=3.12`
     - Dependencies: `rich`, `prompt-toolkit`, `claude-agent-sdk`, `httpx`
     - Dev dependencies: `pytest`, `pytest-asyncio`, `hypothesis`, `ruff`
@@ -42,7 +42,7 @@ session.
     - Tool config: `asyncio_mode = "auto"`, ruff `target-version = "py312"`, `line-length = 100`
     - _Requirements: 16.5, 16.8, 16.9_
 
-  - [ ] 1.3 Create `Makefile`
+  - [x] 1.3 Create `Makefile`
     - `build`: `uv build`
     - `test`: `uv run pytest tests/ -q`
     - `lint`: `uv run ruff check src/ tests/`
@@ -50,7 +50,7 @@ session.
     - `clean`: remove `__pycache__`, `.pyc`, `*.egg-info`, `dist/`, `build/`
     - _Requirements: 16.7_
 
-  - [ ] 1.4 Implement `src/agent_repl/types.py`
+  - [x] 1.4 Implement `src/agent_repl/types.py`
     - `StreamEventType` enum (TEXT_DELTA, TOOL_USE_START, TOOL_RESULT, USAGE, ERROR)
     - Frozen dataclasses: `Theme`, `StreamEvent`, `TokenUsage`, `FileContext`, `ToolUse`
     - Mutable dataclass: `ConversationTurn`
@@ -60,14 +60,14 @@ session.
     - `AgentPlugin` protocol extending Plugin (default_model, send_message, compact_history)
     - _Requirements: 15.1_
 
-  - [ ] 1.5 Implement `src/agent_repl/constants.py`
+  - [x] 1.5 Implement `src/agent_repl/constants.py`
     - `DEFAULT_MAX_PINNED_DISPLAY = 6`
     - `DEFAULT_MAX_FILE_SIZE = 512_000`
     - `DEFAULT_PINNED_COMMANDS = ["help", "quit"]`
     - `DEFAULT_CONFIG_PATH = ".af/config.toml"`
     - `APP_NAME = "agent_repl"`
 
-  - [ ] 1.6 Implement `src/agent_repl/exceptions.py`
+  - [x] 1.6 Implement `src/agent_repl/exceptions.py`
     - `AgentReplError(Exception)` -- base
     - `AgentError(AgentReplError)` -- agent failures
     - `PluginError(AgentReplError)` -- plugin loading/registration errors
@@ -75,21 +75,21 @@ session.
     - `ClipboardError(AgentReplError)` -- clipboard failures
     - `FileContextError(AgentReplError)` -- file resolution errors
 
-  - [ ] 1.7 Set up public API exports in `__init__.py`
+  - [x] 1.7 Set up public API exports in `__init__.py`
     - Export: `App`, `Config`, `Theme`, `Plugin`, `AgentPlugin`, `SlashCommand`, `StreamEvent`, `StreamEventType`
     - `App` import will be deferred (not yet implemented); export the types that exist
     - _Requirements: 15.1, 15.2_
 
-  - [ ] 1.8 Write unit tests for types and exceptions
+  - [x] 1.8 Write unit tests for types and exceptions
     - `tests/test_types.py`: dataclass construction, default values, enum values, protocol runtime checks
     - `tests/test_exceptions.py`: exception hierarchy, inheritance, message formatting
     - **Validates: Requirements 15.1, 15.2**
 
-  - [ ] 1.V Verify task group 1
-    - [ ] All new tests pass: `uv run pytest tests/test_types.py tests/test_exceptions.py -q`
-    - [ ] Linter clean: `uv run ruff check src/ tests/`
-    - [ ] Project builds: `make build`
-    - [ ] Requirements 15.1, 15.2, 16.5, 16.7, 16.8, 16.9 acceptance criteria met
+  - [x] 1.V Verify task group 1
+    - [x] All new tests pass: `uv run pytest tests/test_types.py tests/test_exceptions.py -q`
+    - [x] Linter clean: `uv run ruff check src/ tests/`
+    - [x] Project builds: `make build`
+    - [x] Requirements 15.1, 15.2, 16.5, 16.7, 16.8, 16.9 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 1 is complete. Do NOT continue to task group 2 in this session. -->
 
