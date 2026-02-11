@@ -159,3 +159,42 @@ Verification:
 - Module dependency graph matches design (file_context also depends on constants)
 
 Next session: Task group 9 (TUI Shell + Stream Handler)
+
+---
+
+2026-02-11T15:30:00Z
+Specification: .specs/01_base_app
+Task: 9 (TUI Shell + Stream Handler)
+Branch: feature/tui-stream-handler
+
+Completed:
+- 9.1 tui.py: TUIShell class
+  - Rich Console for output, prompt_toolkit PromptSession for async input
+  - show_banner(), show_markdown() with gutter bar, show_info/error/warning()
+  - show_tool_result() with success/error panel styling
+  - start_spinner/stop_spinner, start_live_text/append_live_text/finalize_live_text
+  - copy_to_clipboard() with ClipboardError handling
+  - prompt_input() async with HTML prompt, completer, toolbar
+  - Ctrl+Y key binding for clipboard copy
+  - set_completer(), set_toolbar_provider(), _build_toolbar()
+  - Theme support via Config.theme
+- 9.2 stream_handler.py: StreamHandler class
+  - handle_stream() processes async StreamEvent iterator
+  - TEXT_DELTA → live text accumulation, TOOL_USE_START → info display
+  - TOOL_RESULT → panel + ToolUse recording, USAGE → token accumulation
+  - Non-fatal ERROR → display + continue, fatal ERROR → terminate
+  - Spinner dismissed on first content event
+  - Empty/cancelled streams handled gracefully
+  - Builds ConversationTurn, adds to session, sets last_response
+- 9.3 test_tui.py: 30 tests covering banner, markdown, messages, panels,
+  spinner, live text, clipboard, completer, toolbar, theming
+- 9.4 test_stream_handler.py: 20 tests including Property 19 (Hypothesis)
+- 9.V Verification: 247 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 247 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 10 (Slash Command Completer + Built-in Commands)

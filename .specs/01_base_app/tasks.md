@@ -299,8 +299,8 @@ session.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 9. TUI Shell + Stream Handler
-  - [ ] 9.1 Implement `src/agent_repl/tui.py`
+- [x] 9. TUI Shell + Stream Handler
+  - [x] 9.1 Implement `src/agent_repl/tui.py`
     - `TUIShell` class with Rich `Console` and prompt_toolkit `PromptSession`
     - `__init__(self, config: Config)`: initialize console, theme, prompt session
     - `show_banner(app_name, version, agent_name, model)`: render startup banner with name, version, agent info, `/help` hint
@@ -320,7 +320,7 @@ session.
     - `set_toolbar_provider(provider: Callable[[], list[str]])`: set callback for bottom toolbar content
     - _Requirements: 7.1-7.10, 7.E1, 7.E2_
 
-  - [ ] 9.2 Implement `src/agent_repl/stream_handler.py`
+  - [x] 9.2 Implement `src/agent_repl/stream_handler.py`
     - `StreamHandler` class
     - `__init__(self, tui: TUIShell, session: Session)`
     - `async handle_stream(events: AsyncIterator[StreamEvent]) -> ConversationTurn`:
@@ -337,7 +337,7 @@ session.
       - Return turn
     - _Requirements: 6.1-6.9, 6.E1, 6.E2_
 
-  - [ ] 9.3 Write unit tests for TUI Shell
+  - [x] 9.3 Write unit tests for TUI Shell
     - `tests/test_tui.py`
     - Test banner output contains app name, version, agent info
     - Test markdown rendering calls Rich
@@ -350,7 +350,7 @@ session.
     - Mock Rich Console and prompt_toolkit for isolation
     - **Validates: Requirements 7.1-7.10, 7.E1, 7.E2**
 
-  - [ ] 9.4 Write unit and property tests for stream_handler
+  - [x] 9.4 Write unit and property tests for stream_handler
     - `tests/test_stream_handler.py`
     - **Property 19: Stream Finalization** -- any stream (including empty) produces exactly one ConversationTurn
     - Test TEXT_DELTA accumulation
@@ -364,11 +364,11 @@ session.
     - Test cancelled stream produces partial turn
     - **Validates: Requirements 6.1-6.9, 6.E1, 6.E2**
 
-  - [ ] 9.V Verify task group 9
-    - [ ] All new tests pass: `uv run pytest tests/test_tui.py tests/test_stream_handler.py -q`
-    - [ ] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
-    - [ ] No linter warnings: `uv run ruff check src/ tests/`
-    - [ ] Requirements 6.1-6.9, 6.E1, 6.E2, 7.1-7.10, 7.E1, 7.E2 acceptance criteria met
+  - [x] 9.V Verify task group 9
+    - [x] All new tests pass: `uv run pytest tests/test_tui.py tests/test_stream_handler.py -q`
+    - [x] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
+    - [x] No linter warnings: `uv run ruff check src/ tests/`
+    - [x] Requirements 6.1-6.9, 6.E1, 6.E2, 7.1-7.10, 7.E1, 7.E2 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 9 is complete. Do NOT continue to task group 10 in this session. -->
 
