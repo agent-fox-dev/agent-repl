@@ -105,3 +105,32 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 7 (Plugin System - Loader + Registry)
+
+---
+
+2026-02-11T15:00:00Z
+Specification: .specs/01_base_app
+Task: 7 (Plugin System - Loader + Registry)
+Branch: feature/plugin-system
+
+Completed:
+- 7.1 plugin_loader.py: load_plugin(dotted_path) -> Plugin | None
+  - importlib.import_module for dynamic loading
+  - create_plugin() factory lookup and invocation
+  - Graceful handling: ImportError, missing factory, non-callable, factory exception
+  - All failures logged as warnings, return None
+- 7.2 plugin_registry.py: PluginRegistry class
+  - register(plugin, command_registry): stores plugin, registers commands, detects AgentPlugin
+  - set_agent(): enforces single-agent constraint via PluginError
+  - active_agent property, plugins property (returns copy), get_status_hints()
+- 7.3 test_plugin_system.py: 16 tests including Properties 15-16 (Hypothesis)
+- 7.4 test_plugin_loader.py: 9 tests covering success, import error, missing/non-callable factory, factory exception
+- 7.V Verification: 197 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 197 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 8 (Checkpoint) then 9 (TUI Shell + Stream Handler)
