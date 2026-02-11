@@ -289,3 +289,38 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 13 (Checkpoint) then 14 (CLI + Session Spawner)
+
+---
+
+2026-02-11T17:30:00Z
+Specification: .specs/01_base_app
+Task: 13 (Default Claude Agent)
+Branch: feature/claude-agent
+
+Completed:
+- 13.1 agents/claude_agent.py: ClaudeAgentPlugin class
+  - Implements AgentPlugin protocol: name, description, default_model, send_message, compact_history
+  - Authentication detection: ANTHROPIC_API_KEY, CLAUDE_CODE_USE_VERTEX, CLAUDE_CODE_USE_BEDROCK
+  - No auth → AgentError with setup instructions listing all methods
+  - SDK stream translation: TextBlock→TEXT_DELTA, ToolUseBlock→TOOL_USE_START,
+    ToolResultBlock→TOOL_RESULT (with tool name tracking), ResultMessage→USAGE
+  - AssistantMessage.error → ERROR (fatal for auth/billing, non-fatal for rate_limit etc)
+  - ClaudeSDKError during streaming → ERROR (fatal)
+  - /clear command: clears session history
+  - /compact command: queries agent for summary, replaces history
+  - continue_conversation flag set after first message
+  - Model detection updated from AssistantMessage.model
+  - Graceful degradation: _SDK_AVAILABLE flag, on_load raises if SDK missing
+  - create_plugin() factory function
+- 13.2 test_claude_agent.py: 33 tests covering protocol, auth, on_load, prompt building,
+  stream translation (7 event type tests), commands, status hints, model detection, factory
+- 13.V Verification: 350 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/test_claude_agent.py -q → 33 passed
+- uv run pytest tests/ -q --ignore=tests/integration → 350 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 14 (Agent Session Spawning)

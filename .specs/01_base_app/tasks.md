@@ -518,8 +518,8 @@ session.
 
 <!-- SESSION BOUNDARY: Task group 12 is complete. Do NOT continue to task group 13 in this session. -->
 
-- [ ] 13. Default Claude Agent
-  - [ ] 13.1 Implement `src/agent_repl/agents/claude_agent.py`
+- [x] 13. Default Claude Agent
+  - [x] 13.1 Implement `src/agent_repl/agents/claude_agent.py`
     - `ClaudeAgentPlugin` class implementing AgentPlugin
     - `name = "Claude"`, `description = "Anthropic Claude agent via claude-agent-sdk"`
     - `default_model: str` -- detected from SDK or config
@@ -547,7 +547,7 @@ session.
     - `on_load()`, `on_unload()`: manage SDK client lifecycle
     - _Requirements: 11.1-11.7, 11.E1-11.E3_
 
-  - [ ] 13.2 Write unit tests for Claude agent
+  - [x] 13.2 Write unit tests for Claude agent
     - `tests/test_claude_agent.py`
     - Test authentication detection (API key, Vertex, Bedrock)
     - Test no auth → AgentError with instructions
@@ -562,11 +562,11 @@ session.
     - Test SDK import failure → graceful degradation (log warning)
     - **Validates: Requirements 11.1-11.7, 11.E1-11.E3**
 
-  - [ ] 13.V Verify task group 13
-    - [ ] All new tests pass: `uv run pytest tests/test_claude_agent.py -q`
-    - [ ] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
-    - [ ] No linter warnings: `uv run ruff check src/ tests/`
-    - [ ] Requirements 11.1-11.7, 11.E1-11.E3 acceptance criteria met
+  - [x] 13.V Verify task group 13
+    - [x] All new tests pass: `uv run pytest tests/test_claude_agent.py -q`
+    - [x] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
+    - [x] No linter warnings: `uv run ruff check src/ tests/`
+    - [x] Requirements 11.1-11.7, 11.E1-11.E3 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 13 is complete. Do NOT continue to task group 14 in this session. -->
 
