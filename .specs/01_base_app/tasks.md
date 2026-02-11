@@ -93,13 +93,13 @@ session.
 
 <!-- SESSION BOUNDARY: Task group 1 is complete. Do NOT continue to task group 2 in this session. -->
 
-- [ ] 2. Checkpoint - Foundation Types Complete
+- [x] 2. Checkpoint - Foundation Types Complete
   - Ensure all tests pass, project builds, linter clean.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 3. Input Parsing + File Context Resolution
-  - [ ] 3.1 Implement `src/agent_repl/input_parser.py`
+- [x] 3. Input Parsing + File Context Resolution
+  - [x] 3.1 Implement `src/agent_repl/input_parser.py`
     - `ParsedCommand` frozen dataclass (name: str, args: str)
     - `ParsedFreeText` frozen dataclass (text: str, mentions: list[str])
     - `ParseResult = ParsedCommand | ParsedFreeText | None`
@@ -109,7 +109,7 @@ session.
     - Empty/whitespace input → None
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.E1, 2.E2, 2.E3_
 
-  - [ ] 3.2 Implement `src/agent_repl/file_context.py`
+  - [x] 3.2 Implement `src/agent_repl/file_context.py`
     - `resolve_file_context(path: str, max_file_size: int) -> FileContext`
     - `resolve_mentions(mentions: list[str], max_file_size: int) -> list[FileContext]`
     - File reading: UTF-8 text, size limit check, binary detection
@@ -118,25 +118,25 @@ session.
     - Error handling: missing path, binary file, size exceeded, empty directory
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.E1, 3.E2, 3.E3, 3.E4, 3.E5_
 
-  - [ ] 3.3 Write property tests for input_parser
+  - [x] 3.3 Write property tests for input_parser
     - `tests/test_input_parser.py`
     - **Property 1: Input Classification Completeness** -- for any string, result is exactly one of None, ParsedCommand, ParsedFreeText
     - **Property 2: Slash Command Parsing** -- `/name args` → ParsedCommand(name, args)
     - **Property 3: Mention Extraction** -- `@path` tokens extracted in order
     - **Validates: Requirements 2.1-2.4, 2.E1-2.E3**
 
-  - [ ] 3.4 Write unit and property tests for file_context
+  - [x] 3.4 Write unit and property tests for file_context
     - `tests/test_file_context.py`
     - **Property 12: File Context Size Enforcement** -- files exceeding limit → error FileContext
     - **Property 13: File Context Determinism** -- directory results sorted by path
     - Test: missing path, binary file, valid UTF-8 file, .gitignore filtering, empty directory
     - **Validates: Requirements 3.1-3.4, 3.E1-3.E5**
 
-  - [ ] 3.V Verify task group 3
-    - [ ] All new tests pass: `uv run pytest tests/test_input_parser.py tests/test_file_context.py -q`
-    - [ ] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
-    - [ ] No linter warnings: `uv run ruff check src/ tests/`
-    - [ ] Requirements 2.1-2.4, 2.E1-2.E3, 3.1-3.4, 3.E1-3.E5 acceptance criteria met
+  - [x] 3.V Verify task group 3
+    - [x] All new tests pass: `uv run pytest tests/test_input_parser.py tests/test_file_context.py -q`
+    - [x] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
+    - [x] No linter warnings: `uv run ruff check src/ tests/`
+    - [x] Requirements 2.1-2.4, 2.E1-2.E3, 3.1-3.4, 3.E1-3.E5 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 3 is complete. Do NOT continue to task group 4 in this session. -->
 
