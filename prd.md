@@ -301,3 +301,66 @@ The `agent_repl` package exports a clean surface from its top-level
   API keys produce clear messages rather than crashes.
 - **Platform support**: macOS and Linux (X11 and Wayland) are first-class;
   Windows is best-effort.
+
+## Clarifications
+
+The following clarifications were collected during specification review.
+
+### Ambiguities Resolved
+
+- **A1 (Agent Session Spawning hooks):** Hooks are synchronous. Post-hooks
+  receive only a notification that the session completed, not the session
+  result.
+- **A2 (CLI Slash Command Invocation):** The mapping from slash command name to
+  CLI flag is automatic (e.g. `/compact` → `--compact`). Parameters are passed
+  to the handler as a list.
+- **A3 (Active agent selection):** Always use `agent_factory` from `Config` as
+  the sole mechanism. It is an error if more than one agent is configured.
+- **A4 (ERROR StreamEvent):** Keep the stream alive for non-fatal errors.
+  Terminate only on hard technical failures (lost connectivity, API
+  unavailable, etc.).
+- **A5 (`/agent` default model):** `default_model` is a required string
+  property on the `AgentPlugin` protocol.
+
+### Underspecification Resolved
+
+- **U1 (Spawned session initiation):** Primarily programmatic; may also be
+  triggered via slash commands. Multiple spawned sessions may run in parallel.
+- **U2 (Hook failures):** If a pre-hook fails, abort the spawned session with
+  an error — the agent session does not start. If a post-hook fails, abort with
+  an error (agent work is already complete).
+- **U3 (CLI-exposed commands):** Only a configured/annotated subset of slash
+  commands are exposed as CLI flags — those where non-interactive invocation
+  makes sense.
+- **U4 (replace_with_summary):** The underlying claude-agent-sdk manages
+  compaction automatically. The framework's `/compact` command can trigger
+  summary generation by asking the agent to summarize the conversation, then
+  replacing the session history with the result.
+- **U5 (File context limits):** Only text files are read. No recursive
+  directory parsing. Files matched by `.gitignore` are excluded. A configurable
+  upper size limit prevents blowing the context window.
+- **U6 (Contextual info below prompt):** Shown conditionally via a plugin
+  callback mechanism — plugins can provide contextual hints.
+- **U7 (`/stats` format):** Shows cumulative tokens since REPL start. Format:
+  `NN tokens` when < 1000; `NN.NN k tokens` when ≥ 1000.
+- **U8 (Canonical example):** Provide both a working Claude example (requires
+  credentials) and an echo agent for credential-free testing.
+
+### Implicit Assumptions Made Explicit
+
+- **I1 (Concurrency model):** `asyncio` is the explicit concurrency model.
+- **I2 (Command handler errors):** If a plugin command handler raises an
+  exception, the REPL displays the error message and continues.
+- **I3 (Configuration precedence):** `.af/config.toml` primarily specifies
+  plugins to load dynamically. Plugins may read their own configuration from
+  the same file.
+- **I4 (Concurrent execution):** Single-threaded command execution for now, but
+  architecture should prepare for future concurrency.
+
+### SDK Note
+
+The `claude-code-sdk` package referenced in the PRD has been renamed to
+`claude-agent-sdk` (PyPI) / `claude_agent_sdk` (import). The current version
+is 0.1.35. The SDK provides `ClaudeSDKClient` for interactive multi-turn
+sessions and supports session forking, subagents, and automatic conversation
+compaction via `PreCompact` hooks.
