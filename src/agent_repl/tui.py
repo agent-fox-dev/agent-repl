@@ -125,15 +125,16 @@ class TUIShell:
             self._console.print(text, end="", highlight=False)
 
     def finalize_live_text(self) -> None:
-        """Stop live display and render final content as markdown."""
+        """Stop live display and finalize the streamed content."""
         if self._live_active:
             full_text = "".join(self._live_text_parts)
             self._live_active = False
             self._live_text_parts = []
             if full_text:
-                # Print a newline to end the streaming output
+                # End the streaming line and show the gutter bar
                 self._console.print()
-                self.show_markdown(full_text)
+                gutter = Text("┃", style=self._theme.gutter_color)
+                self._console.print(gutter)
                 self._last_response = full_text
 
     def copy_to_clipboard(self, text: str) -> None:
