@@ -76,3 +76,32 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 5 (Checkpoint) then 6 (Command Registry + Config Loader)
+
+---
+
+2026-02-11T14:30:00Z
+Specification: .specs/01_base_app
+Task: 5 (Checkpoint) + 6 (Command Registry + Config Loader)
+Branch: feature/command-registry-config-loader
+
+Completed:
+- 5. Checkpoint verified: 137 tests pass, linter clean
+- 6.1 command_registry.py: CommandRegistry class
+  - register(), get(), list_all(), complete(), get_pinned()
+  - Deduplication of pinned names, max_count cap
+- 6.2 config_loader.py: LoadedConfig dataclass, load_config()
+  - Missing file → creates default template with [plugins] section
+  - Malformed TOML → logs warning, returns empty LoadedConfig
+  - Valid TOML → extracts [plugins].paths, exposes full raw dict
+  - Uses stdlib tomllib (Python 3.11+)
+- 6.3 test_command_registry.py: 22 tests including Properties 4-6 (Hypothesis)
+- 6.4 test_config_loader.py: 13 tests including Property 20 (Hypothesis)
+- 6.V Verification: 172 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 172 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 7 (Plugin System - Loader + Registry)
