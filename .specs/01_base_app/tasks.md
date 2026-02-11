@@ -437,8 +437,8 @@ session.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 12. REPL Loop + App Orchestration
-  - [ ] 12.1 Implement `src/agent_repl/repl.py`
+- [x] 12. REPL Loop + App Orchestration
+  - [x] 12.1 Implement `src/agent_repl/repl.py`
     - `REPL` class
     - `__init__(self, session, tui, command_registry, plugin_registry, config)`
     - `async run()`:
@@ -458,7 +458,7 @@ session.
         - Same logic as Ctrl+C
     - _Requirements: 1.1-1.8, 1.E1-1.E3_
 
-  - [ ] 12.2 Implement `src/agent_repl/app.py`
+  - [x] 12.2 Implement `src/agent_repl/app.py`
     - `App` class
     - `__init__(self, config: Config | None = None)`:
       - `self._config = config or Config()`
@@ -478,11 +478,11 @@ session.
       - Create and run `REPL`
     - _Requirements: 1.8, 10.4-10.6, 10.10-10.12, 7.9_
 
-  - [ ] 12.3 Complete public API exports in `__init__.py`
+  - [x] 12.3 Complete public API exports in `__init__.py`
     - Now that `App` exists, finalize all exports
     - _Requirements: 15.1, 15.2_
 
-  - [ ] 12.4 Write unit tests for REPL
+  - [x] 12.4 Write unit tests for REPL
     - `tests/test_repl.py`
     - **Property 18: Graceful Error Recovery** -- command handler exception → error shown, loop continues
     - Test empty input → re-prompt (no dispatch)
@@ -498,7 +498,7 @@ session.
     - Use mock TUI, mock agent, mock registry
     - **Validates: Requirements 1.1-1.8, 1.E1-1.E3**
 
-  - [ ] 12.5 Write unit tests for App
+  - [x] 12.5 Write unit tests for App
     - `tests/test_app.py`
     - Test initialization creates all subsystems
     - Test plugin loading from Config.plugins
@@ -510,11 +510,11 @@ session.
     - Test completer set up with correct pinned commands
     - **Validates: Requirements 10.4-10.6, 10.E1**
 
-  - [ ] 12.V Verify task group 12
-    - [ ] All new tests pass: `uv run pytest tests/test_repl.py tests/test_app.py -q`
-    - [ ] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
-    - [ ] No linter warnings: `uv run ruff check src/ tests/`
-    - [ ] Requirements 1.1-1.8, 1.E1-1.E3, 10.4-10.6, 10.E1, 7.9, 15.1, 15.2 acceptance criteria met
+  - [x] 12.V Verify task group 12
+    - [x] All new tests pass: `uv run pytest tests/test_repl.py tests/test_app.py -q`
+    - [x] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
+    - [x] No linter warnings: `uv run ruff check src/ tests/`
+    - [x] Requirements 1.1-1.8, 1.E1-1.E3, 10.4-10.6, 10.E1, 7.9, 15.1, 15.2 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 12 is complete. Do NOT continue to task group 13 in this session. -->
 

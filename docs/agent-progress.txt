@@ -256,3 +256,36 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 12 (REPL Loop + App Orchestration)
+
+---
+
+2026-02-11T17:00:00Z
+Specification: .specs/01_base_app
+Task: 12 (REPL Loop + App Orchestration)
+Branch: feature/repl-app
+
+Completed:
+- 12.1 repl.py: REPL class
+  - run() loop: prompt_input → parse_input → dispatch
+  - _handle_command(): registry lookup, CommandContext, QuitRequestedError propagation
+  - _handle_free_text(): agent check, resolve_mentions, MessageContext, StreamHandler
+  - Ctrl+C/D: KeyboardInterrupt/EOFError at prompt → exit; during stream → caught by StreamHandler
+  - Error recovery: command/agent exceptions caught → show_error → continue loop
+- 12.2 app.py: App class
+  - __init__: creates Session, TUIShell, CommandRegistry, PluginRegistry
+  - _setup(): BuiltinCommandsPlugin first, load_config, plugin loading with on_load error handling,
+    agent_factory with full error handling, SlashCommandCompleter, toolbar provider
+  - run(): _setup → show_banner (with agent info) → REPL.run()
+- 12.3 __init__.py: Added App to public API exports (8 total exports)
+- 12.4 test_repl.py: 21 tests including Property 18 (Hypothesis)
+- 12.5 test_app.py: 16 tests
+- 12.V Verification: 317 tests pass, linter clean
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/test_repl.py tests/test_app.py -q → 37 passed
+- uv run pytest tests/ -q --ignore=tests/integration → 317 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 13 (Checkpoint) then 14 (CLI + Session Spawner)
