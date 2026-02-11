@@ -140,8 +140,8 @@ session.
 
 <!-- SESSION BOUNDARY: Task group 3 is complete. Do NOT continue to task group 4 in this session. -->
 
-- [ ] 4. Session Management + Clipboard
-  - [ ] 4.1 Implement `src/agent_repl/session.py`
+- [x] 4. Session Management + Clipboard
+  - [x] 4.1 Implement `src/agent_repl/session.py`
     - `TokenStatistics` class
       - `total_input: int`, `total_output: int` (initialized to 0)
       - `accumulate(usage: TokenUsage)` -- adds to totals
@@ -157,7 +157,7 @@ session.
       - `stats` property
     - _Requirements: 8.1-8.7, 8.E1, 8.E2, 5.6_
 
-  - [ ] 4.2 Implement `src/agent_repl/clipboard.py`
+  - [x] 4.2 Implement `src/agent_repl/clipboard.py`
     - `copy_to_clipboard(text: str) -> None`
     - Platform detection: `sys.platform` for macOS; `$WAYLAND_DISPLAY` / `$DISPLAY` for Linux
     - macOS → `pbcopy`; Linux Wayland → `wl-copy`; Linux X11 → `xclip -selection clipboard`
@@ -165,7 +165,7 @@ session.
     - Uses `subprocess.run` with text piped to stdin
     - _Requirements: 9.1, 9.2, 9.3, 9.E1, 9.E2, 9.E3_
 
-  - [ ] 4.3 Write property tests for session
+  - [x] 4.3 Write property tests for session
     - `tests/test_session.py`
     - **Property 7: Session History Ordering** -- turns returned in insertion order
     - **Property 8: Token Accumulation Correctness** -- totals equal sum of individual usages
@@ -174,7 +174,7 @@ session.
     - **Property 11: Last Assistant Response** -- returns last assistant content or None
     - **Validates: Requirements 8.1-8.7, 8.E1, 8.E2, 5.6**
 
-  - [ ] 4.4 Write unit tests for clipboard
+  - [x] 4.4 Write unit tests for clipboard
     - `tests/test_clipboard.py`
     - **Property 14: Clipboard Platform Selection** -- exactly one mechanism or error per platform
     - Test macOS (mock `sys.platform == "darwin"`, mock subprocess)
@@ -185,11 +185,11 @@ session.
     - Test command failure (non-zero exit)
     - **Validates: Requirements 9.1-9.3, 9.E1-9.E3**
 
-  - [ ] 4.V Verify task group 4
-    - [ ] All new tests pass: `uv run pytest tests/test_session.py tests/test_clipboard.py -q`
-    - [ ] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
-    - [ ] No linter warnings: `uv run ruff check src/ tests/`
-    - [ ] Requirements 8.1-8.7, 8.E1, 8.E2, 5.6, 9.1-9.3, 9.E1-9.E3 acceptance criteria met
+  - [x] 4.V Verify task group 4
+    - [x] All new tests pass: `uv run pytest tests/test_session.py tests/test_clipboard.py -q`
+    - [x] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
+    - [x] No linter warnings: `uv run ruff check src/ tests/`
+    - [x] Requirements 8.1-8.7, 8.E1, 8.E2, 5.6, 9.1-9.3, 9.E1-9.E3 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 4 is complete. Do NOT continue to task group 5 in this session. -->
 
