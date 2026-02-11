@@ -53,3 +53,26 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 4 (Session Management + Clipboard)
+
+---
+
+2026-02-11T14:00:00Z
+Specification: .specs/01_base_app
+Task: 4 (Session Management + Clipboard)
+Branch: feature/session-clipboard
+
+Completed:
+- 4.1 session.py: TokenStatistics (accumulate, format_tokens, format_input/output),
+  Session (add_turn, get_history, clear, last_assistant_response, replace_with_summary)
+- 4.2 clipboard.py: copy_to_clipboard() with platform detection
+  (macOS→pbcopy, Linux Wayland→wl-copy, Linux X11→xclip), ClipboardError on failure
+- 4.3 test_session.py: 22 tests including Properties 7-11 (Hypothesis)
+- 4.4 test_clipboard.py: 17 tests including Property 14
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 137 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 5 (Checkpoint) then 6 (Command Registry + Config Loader)
