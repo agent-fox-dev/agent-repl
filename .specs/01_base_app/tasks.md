@@ -654,8 +654,8 @@ session.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 17. Canonical Example + Integration Tests
-  - [ ] 17.1 Create echo agent example
+- [x] 17. Canonical Example + Integration Tests
+  - [x] 17.1 Create echo agent example
     - `examples/echo_agent.py`: `EchoAgentPlugin` class
       - Implements `AgentPlugin` protocol
       - `send_message()` echoes back the user's message as TEXT_DELTA events
@@ -664,13 +664,13 @@ session.
       - No external dependencies or credentials required
     - _Requirements: 14.3, 14.10, 14.E1_
 
-  - [ ] 17.2 Create demo plugin with custom commands
+  - [x] 17.2 Create demo plugin with custom commands
     - `examples/demo_plugin.py`: `DemoPlugin` class
       - Registers custom slash commands (e.g. `/greet`, `/time`)
       - Demonstrates `get_commands()`, `on_load()`, `get_status_hints()`
     - _Requirements: 14.5_
 
-  - [ ] 17.3 Create main demo application
+  - [x] 17.3 Create main demo application
     - `examples/demo.py`: entry point
       - Creates `Config` with `Theme`, `agent_factory` (echo agent by default, Claude with `--claude` flag)
       - Registers demo plugin
@@ -679,7 +679,7 @@ session.
     - `examples/__init__.py`: package marker
     - _Requirements: 14.1, 14.2, 14.4, 14.6, 14.8_
 
-  - [ ] 17.4 Create session spawning example
+  - [x] 17.4 Create session spawning example
     - Add to `examples/demo.py` or separate `examples/spawn_demo.py`:
       - Custom slash command `/spawn` that triggers a spawned session
       - Pre-hook: print "Starting isolated task..."
@@ -687,7 +687,7 @@ session.
       - Demonstrates `SpawnConfig` and `App.spawn_session()`
     - _Requirements: 14.7_
 
-  - [ ] 17.5 Write example documentation
+  - [x] 17.5 Write example documentation
     - `examples/README.md`:
       - Overview of example application
       - How to run the echo demo: `uv run python examples/demo.py`
@@ -699,7 +699,7 @@ session.
     - Add inline comments and docstrings throughout example files
     - _Requirements: 14.9_
 
-  - [ ] 17.6 Write integration tests
+  - [x] 17.6 Write integration tests
     - `tests/integration/test_integration.py`:
       - Test full REPL loop with echo agent: start → send message → receive echo → /quit
       - Test built-in commands in context: /help, /version, /stats, /copy, /agent
@@ -714,7 +714,7 @@ session.
       - Test demo plugin commands are registered
     - **Validates: all requirements end-to-end**
 
-  - [ ] 17.7 Update project README.md
+  - [x] 17.7 Update project README.md
     - Project overview and features
     - Installation instructions (`uv add agent_repl`)
     - Quick start with code example
@@ -724,12 +724,12 @@ session.
     - Link to `examples/README.md` for detailed examples
     - _Requirements: 14.9_
 
-  - [ ] 17.V Verify task group 17
-    - [ ] All new tests pass: `uv run pytest tests/integration/ -q`
-    - [ ] All existing tests still pass: `uv run pytest tests/ -q`
-    - [ ] No linter warnings: `uv run ruff check src/ tests/ examples/`
-    - [ ] Example runs: `uv run python examples/demo.py --version`
-    - [ ] Requirements 14.1-14.10, 14.E1 acceptance criteria met
+  - [x] 17.V Verify task group 17
+    - [x] All new tests pass: `uv run pytest tests/integration/ -q`
+    - [x] All existing tests still pass: `uv run pytest tests/ -q` (410 passed)
+    - [x] No linter warnings: `uv run ruff check src/ tests/ examples/`
+    - [x] Example runs: `uv run python -m examples.demo --version`
+    - [x] Requirements 14.1-14.10, 14.E1 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 17 is complete. All implementation is done. -->
 
