@@ -243,8 +243,8 @@ session.
 
 <!-- SESSION BOUNDARY: Task group 6 is complete. Do NOT continue to task group 7 in this session. -->
 
-- [ ] 7. Plugin System (Loader + Registry)
-  - [ ] 7.1 Implement `src/agent_repl/plugin_loader.py`
+- [x] 7. Plugin System (Loader + Registry)
+  - [x] 7.1 Implement `src/agent_repl/plugin_loader.py`
     - `load_plugin(dotted_path: str) -> Plugin | None`
     - Import module via `importlib.import_module`
     - Look for `create_plugin()` callable on the module
@@ -254,7 +254,7 @@ session.
     - On `create_plugin()` exception → log warning, return None
     - _Requirements: 10.1, 10.2, 10.3_
 
-  - [ ] 7.2 Implement `src/agent_repl/plugin_registry.py`
+  - [x] 7.2 Implement `src/agent_repl/plugin_registry.py`
     - `PluginRegistry` class
       - Internal `_plugins: list[Plugin]`, `_active_agent: AgentPlugin | None`
       - `register(plugin: Plugin, command_registry: CommandRegistry)`:
@@ -271,13 +271,13 @@ session.
         - Return concatenated list
     - _Requirements: 10.4, 10.5, 10.6, 10.E1, 10.E2_
 
-  - [ ] 7.3 Write property tests for plugin system
+  - [x] 7.3 Write property tests for plugin system
     - `tests/test_plugin_system.py`
     - **Property 15: Plugin Command Registration** -- all commands from get_commands() are in registry after register()
     - **Property 16: Agent Singleton Invariant** -- second agent registration raises PluginError
     - **Validates: Requirements 10.1-10.6, 10.E1, 10.E2**
 
-  - [ ] 7.4 Write unit tests for plugin_loader
+  - [x] 7.4 Write unit tests for plugin_loader
     - `tests/test_plugin_loader.py`
     - Test successful import and factory call
     - Test missing module → None with logged warning
@@ -285,11 +285,11 @@ session.
     - Test create_plugin raises → None with logged warning
     - **Validates: Requirements 10.1-10.3**
 
-  - [ ] 7.V Verify task group 7
-    - [ ] All new tests pass: `uv run pytest tests/test_plugin_system.py tests/test_plugin_loader.py -q`
-    - [ ] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
-    - [ ] No linter warnings: `uv run ruff check src/ tests/`
-    - [ ] Requirements 10.1-10.6, 10.E1, 10.E2 acceptance criteria met
+  - [x] 7.V Verify task group 7
+    - [x] All new tests pass: `uv run pytest tests/test_plugin_system.py tests/test_plugin_loader.py -q`
+    - [x] All existing tests still pass: `uv run pytest tests/ -q --ignore=tests/integration`
+    - [x] No linter warnings: `uv run ruff check src/ tests/`
+    - [x] Requirements 10.1-10.6, 10.E1, 10.E2 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 7 is complete. Do NOT continue to task group 8 in this session. -->
 
