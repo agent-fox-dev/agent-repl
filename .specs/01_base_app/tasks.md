@@ -293,7 +293,7 @@ session.
 
 <!-- SESSION BOUNDARY: Task group 7 is complete. Do NOT continue to task group 8 in this session. -->
 
-- [ ] 8. Checkpoint - Core Infrastructure Complete
+- [x] 8. Checkpoint - Core Infrastructure Complete
   - Ensure all tests pass across all modules implemented so far.
   - Verify module dependency graph matches design: types ← input_parser, file_context, session, clipboard, command_registry, config_loader, plugin_loader, plugin_registry.
 

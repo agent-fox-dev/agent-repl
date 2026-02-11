@@ -134,3 +134,28 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 8 (Checkpoint) then 9 (TUI Shell + Stream Handler)
+
+---
+
+2026-02-11T15:15:00Z
+Specification: .specs/01_base_app
+Task: 8 (Checkpoint - Core Infrastructure Complete)
+Branch: develop (checkpoint only)
+
+Completed:
+- 8. Checkpoint verified:
+  - 197 tests pass (18 property-based), linter clean
+  - Module dependency graph verified: no circular dependencies
+  - All modules: types, constants, exceptions, input_parser, file_context,
+    session, clipboard, command_registry, config_loader, plugin_loader,
+    plugin_registry — implemented and tested
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 197 passed
+- uv run pytest tests/ -q -m property --ignore=tests/integration → 18 passed
+- uv run ruff check src/ tests/ → All checks passed
+- Module dependency graph matches design (file_context also depends on constants)
+
+Next session: Task group 9 (TUI Shell + Stream Handler)
