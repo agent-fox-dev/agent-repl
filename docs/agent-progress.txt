@@ -389,3 +389,29 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 16 (Checkpoint - Full Library Complete)
+
+---
+
+2026-02-11T19:00:00Z
+Specification: .specs/01_base_app
+Task: 16 (Checkpoint - Full Library Complete)
+Branch: develop (checkpoint only)
+
+Completed:
+- 16. Checkpoint verified:
+  - 384 tests pass (19 property-based), linter clean
+  - All 20 correctness properties have corresponding test methods
+  - 19 source modules + 1 agent module, 19 test files
+  - Modules: types, constants, exceptions, input_parser, file_context,
+    session, clipboard, command_registry, config_loader, plugin_loader,
+    plugin_registry, tui, stream_handler, completer, builtin_commands,
+    repl, app, session_spawner, agents/claude_agent
+
+Documentation touched: docs/agent-progress.txt, .specs/01_base_app/tasks.md
+
+Verification:
+- uv run pytest tests/ -q --ignore=tests/integration → 384 passed
+- uv run pytest tests/ -q -m property --ignore=tests/integration → 19 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 17 (Canonical Example + Integration Tests)
