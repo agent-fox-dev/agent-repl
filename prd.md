@@ -109,6 +109,10 @@ for async input with history and completions:
 - Ctrl+Y copies the last assistant output to the clipboard.
 - The prompt includes a horizontal rule above and below, a colored prompt glyph, input history, and Tab completion.
 - Contextual information (keyboard shortcuts, hints etc) can be displayed below the prompt
+- On startup, the TUIShell displays a **banner** that greets the user and shows
+  at-a-glance session information: the application name and version, the active
+  agent and its default model, and any other relevant context (e.g. available
+  key bindings or a hint to type `/help`).
 
 ### 8. Session & Conversation History
 
