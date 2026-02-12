@@ -175,33 +175,33 @@ stored results for 3.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 7. Integration Tests and Cleanup
-  - [ ] 7.1 Write integration test: full stream with tool input display
+- [x] 7. Integration Tests and Cleanup
+  - [x] 7.1 Write integration test: full stream with tool input display
     - Simulate TOOL_USE_START with input data flowing through stream_handler
     - Verify TUI receives correct name + input
     - **Property 1: Tool Input Inclusion**
     - **Validates: Requirements 1.1, 1.6**
 
-  - [ ] 7.2 Write integration test: stream with collapsible output
+  - [x] 7.2 Write integration test: stream with collapsible output
     - Simulate TOOL_RESULT with >3 lines flowing through stream_handler
     - Verify collapse behavior end-to-end
     - **Validates: Requirements 3.1-3.4**
 
-  - [ ] 7.3 Write property-based tests with Hypothesis
+  - [x] 7.3 Write property-based tests with Hypothesis
     - Arbitrary dicts for compact summary (Property 2, 3)
     - Arbitrary multi-line strings for collapse threshold (Property 5)
     - **Validates: Properties 2, 3, 5**
 
-  - [ ] 7.4 Update existing tests for new rendering
+  - [x] 7.4 Update existing tests for new rendering
     - Fix any tests that assert Panel-based output
     - Ensure stream_handler tests reflect new show_tool_use() call
     - _Requirements: all_
 
-  - [ ] 7.V Verify task group 7
-    - [ ] All new tests pass: `uv run pytest -q tests/`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] All 9 correctness properties validated by tests
+  - [x] 7.V Verify task group 7
+    - [x] All new tests pass: `uv run pytest -q tests/`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] All 9 correctness properties validated by tests
 
 <!-- SESSION BOUNDARY -->
 

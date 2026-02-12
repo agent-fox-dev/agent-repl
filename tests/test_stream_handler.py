@@ -1,6 +1,7 @@
 """Tests for stream_handler module.
 
-Covers Requirements 6.1-6.9, 6.E1, 6.E2 and Property 19.
+Covers Requirements 6.1-6.9, 6.E1, 6.E2, Property 19,
+and Spec 02 integration tests (Requirements 1.1, 1.6, 3.1-3.4).
 """
 
 from __future__ import annotations
@@ -452,3 +453,192 @@ class TestStreamHandlerProperties:
             1 for e in events if e.type == StreamEventType.TOOL_RESULT
         )
         assert len(turn.tool_uses) == tool_result_count
+
+
+# --- Integration tests: Spec 02 Tool Display Enhancement ---
+
+
+class TestToolInputIntegration:
+    """Integration: TOOL_USE_START with input flows through stream_handler.
+
+    Validates: Requirements 1.1, 1.6. Property 1: Tool Input Inclusion.
+    """
+
+    @pytest.mark.asyncio
+    async def test_tool_input_passed_to_tui(self):
+        """Full flow: event with input → stream_handler → tui.show_tool_use."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        tool_input = {"command": "ls -la", "timeout": 30}
+        events = [
+            StreamEvent(
+                type=StreamEventType.TOOL_USE_START,
+                data={"name": "bash", "id": "t1", "input": tool_input},
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+        tui.show_tool_use.assert_called_once_with("bash", tool_input)
+
+    @pytest.mark.asyncio
+    async def test_tool_input_with_nested_objects(self):
+        """Nested input dict flows through unchanged."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        tool_input = {"data": {"nested": {"deep": True}}, "mode": "verbose"}
+        events = [
+            StreamEvent(
+                type=StreamEventType.TOOL_USE_START,
+                data={"name": "api", "id": "t2", "input": tool_input},
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+        tui.show_tool_use.assert_called_once_with("api", tool_input)
+
+    @pytest.mark.asyncio
+    async def test_tool_input_empty_dict(self):
+        """Empty input dict passed as-is."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        events = [
+            StreamEvent(
+                type=StreamEventType.TOOL_USE_START,
+                data={"name": "ping", "id": "t3", "input": {}},
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+        tui.show_tool_use.assert_called_once_with("ping", {})
+
+    @pytest.mark.property
+    @given(
+        tool_input=st.dictionaries(
+            st.text(min_size=1, max_size=10),
+            st.text(min_size=0, max_size=50),
+            min_size=0,
+            max_size=5,
+        ),
+    )
+    @pytest.mark.asyncio
+    async def test_property1_tool_input_inclusion(
+        self, tool_input: dict[str, str],
+    ):
+        """Property 1: TOOL_USE_START event input is passed to TUI."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        events = [
+            StreamEvent(
+                type=StreamEventType.TOOL_USE_START,
+                data={"name": "tool", "id": "t1", "input": tool_input},
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+        tui.show_tool_use.assert_called_once_with("tool", tool_input)
+
+
+class TestCollapsibleOutputIntegration:
+    """Integration: TOOL_RESULT with >3 lines flows through stream_handler.
+
+    Validates: Requirements 3.1-3.4.
+    """
+
+    @pytest.mark.asyncio
+    async def test_long_result_collapse_end_to_end(self):
+        """Full flow: multi-line result → stream_handler → tui.show_tool_result."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        long_result = "\n".join(f"line{i}" for i in range(10))
+        events = [
+            StreamEvent(
+                type=StreamEventType.TOOL_RESULT,
+                data={
+                    "name": "search",
+                    "result": long_result,
+                    "is_error": False,
+                },
+            ),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+
+        tui.show_tool_result.assert_called_once_with(
+            "search", long_result, False,
+        )
+        assert len(turn.tool_uses) == 1
+        assert turn.tool_uses[0].result == long_result
+
+    @pytest.mark.asyncio
+    async def test_error_result_full_end_to_end(self):
+        """Error results pass through with is_error=True."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        error_result = "\n".join(f"err{i}" for i in range(10))
+        events = [
+            StreamEvent(
+                type=StreamEventType.TOOL_RESULT,
+                data={
+                    "name": "exec",
+                    "result": error_result,
+                    "is_error": True,
+                },
+            ),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+
+        tui.show_tool_result.assert_called_once_with(
+            "exec", error_result, True,
+        )
+        assert turn.tool_uses[0].is_error is True
+
+    @pytest.mark.asyncio
+    async def test_mixed_stream_tool_input_and_result(self):
+        """Full stream: text + tool use with input + tool result."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        long_result = "\n".join(f"out{i}" for i in range(5))
+        events = [
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA,
+                data={"text": "Let me search."},
+            ),
+            StreamEvent(
+                type=StreamEventType.TOOL_USE_START,
+                data={
+                    "name": "search",
+                    "id": "t1",
+                    "input": {"query": "test"},
+                },
+            ),
+            StreamEvent(
+                type=StreamEventType.TOOL_RESULT,
+                data={
+                    "name": "search",
+                    "result": long_result,
+                    "is_error": False,
+                },
+            ),
+            StreamEvent(
+                type=StreamEventType.USAGE,
+                data={"input_tokens": 50, "output_tokens": 25},
+            ),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+
+        assert turn.content == "Let me search."
+        tui.show_tool_use.assert_called_once_with("search", {"query": "test"})
+        tui.show_tool_result.assert_called_once_with(
+            "search", long_result, False,
+        )
+        assert len(turn.tool_uses) == 1
+        assert turn.usage.input_tokens == 50

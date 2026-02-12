@@ -602,3 +602,45 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 7 (Integration Tests and Cleanup)
+
+---
+
+2026-02-12T15:00:00Z
+Specification: .specs/02_tool_display_enhancement
+Task: 7 (Integration Tests and Cleanup)
+Branch: feature/integration-tests-cleanup
+
+Completed:
+- 7.1 test_stream_handler.py: 4 integration tests for tool input display
+  - Tool input passed to TUI, nested objects, empty dict
+  - Property 1 (Tool Input Inclusion) — property-based test
+- 7.2 test_stream_handler.py: 3 integration tests for collapsible output
+  - Long result collapse e2e, error result e2e, mixed stream e2e
+- 7.3 Property-based tests: All 9 properties already covered from earlier tasks
+  - Property 1 added in 7.1; Properties 2-9 already present
+- 7.4 Existing test updates:
+  - test_claude_agent.py: Added input field assertion to test_tool_use_start
+  - test_integration.py: Added show_tool_use and clear_collapsed_results mocks
+- 7.V All verification checks passed; all 9 correctness properties validated
+
+All 9 Correctness Properties:
+  1. Tool Input Inclusion (test_stream_handler.py)
+  2. Compact Summary Completeness (test_tui.py)
+  3. Value Truncation Bound (test_tui.py)
+  4. No Panel Usage (test_tui.py)
+  5. Collapse Threshold (test_tui.py)
+  6. Error Output Completeness (test_tui.py)
+  7. Collapsed Storage Integrity (test_tui.py)
+  8. Expand Index Validity (test_tui.py)
+  9. Empty Input Omission (test_tui.py)
+
+Documentation touched:
+- .specs/02_tool_display_enhancement/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 463 passed (was 456, +7 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Spec 02 (Tool Display Enhancement) is now COMPLETE.
+All 7 task groups finished. All requirements 1.1-4.6 implemented and tested.
