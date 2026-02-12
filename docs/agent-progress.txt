@@ -687,3 +687,26 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 2 (Checkpoint) then 3 (Approval Mode TUI Prompt)
+
+---
+
+2026-02-12T16:30:00Z
+Specification: .specs/03_agent_input_requests
+Task: 2 (Checkpoint - Event Type and Dispatch Complete)
+Branch: feature/checkpoint-input-dispatch
+
+Completed:
+- Checkpoint verification for task group 1 (Input Request Event Type and Stream Handler Dispatch)
+- All 479 tests pass, linter clean
+- Task group 1 subtasks 1.1–1.V confirmed complete in tasks.md
+- No questions or issues arising from implementation
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 479 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 3 (Approval Mode TUI Prompt)

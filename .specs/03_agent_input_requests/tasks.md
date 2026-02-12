@@ -73,7 +73,7 @@ each mode, and group 5 validates end-to-end.
 
 <!-- SESSION BOUNDARY: Task group 1 is complete. Do NOT continue to task group 2 in this session. -->
 
-- [ ] 2. Checkpoint - Event Type and Dispatch Complete
+- [x] 2. Checkpoint - Event Type and Dispatch Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
