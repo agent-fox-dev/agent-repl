@@ -9,7 +9,6 @@ from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.key_binding import KeyBindings
 from rich.console import Console
 from rich.markdown import Markdown
-from rich.panel import Panel
 from rich.text import Text
 
 from agent_repl.clipboard import copy_to_clipboard
@@ -17,6 +16,7 @@ from agent_repl.exceptions import ClipboardError
 from agent_repl.types import Config
 
 _MAX_VALUE_LENGTH = 60
+_COLLAPSE_THRESHOLD = 3
 
 
 def _format_compact_summary(tool_input: dict[str, Any]) -> str:
@@ -59,6 +59,9 @@ class TUIShell:
         # Spinner state
         self._spinner_active = False
         self._status: Any = None
+
+        # Collapsed tool results storage
+        self._collapsed_results: list[str] = []
 
         # Build key bindings
         self._kb = KeyBindings()
@@ -126,11 +129,38 @@ class TUIShell:
             self._console.print(Text(summary, style="dim"))
 
     def show_tool_result(self, name: str, result: str, is_error: bool) -> None:
-        """Render a tool result in a labeled Rich Panel."""
-        style = self._theme.error_color if is_error else self._theme.info_color
-        title = f"{'✗' if is_error else '✓'} {name}"
-        panel = Panel(result, title=title, border_style=style)
-        self._console.print(panel)
+        """Render tool result as dim text with optional collapse."""
+        # Header line: icon + tool name in themed color
+        color = self._theme.error_color if is_error else self._theme.info_color
+        icon = "✗" if is_error else "✓"
+        self._console.print(Text(f"{icon} {name}", style=color))
+
+        if not result:
+            return
+
+        lines = result.split("\n")
+
+        if is_error or len(lines) <= _COLLAPSE_THRESHOLD:
+            # Show full output
+            self._console.print(
+                Text(result, style="dim"), highlight=False,
+            )
+        else:
+            # Show first 3 lines + collapse hint
+            visible = "\n".join(lines[:_COLLAPSE_THRESHOLD])
+            self._console.print(
+                Text(visible, style="dim"), highlight=False,
+            )
+            hidden = len(lines) - _COLLAPSE_THRESHOLD
+            noun = "line" if hidden == 1 else "lines"
+            self._console.print(
+                Text(f"▸ {hidden} more {noun}", style="dim"),
+            )
+            self._collapsed_results.append(result)
+
+    def clear_collapsed_results(self) -> None:
+        """Clear stored collapsed tool results."""
+        self._collapsed_results = []
 
     def start_spinner(self, text: str = "Thinking...") -> None:
         """Start a Rich spinner/status indicator."""

@@ -258,6 +258,7 @@ class ClaudeAgentPlugin:
 async def _handle_clear(ctx: CommandContext) -> None:
     """Clear conversation history."""
     ctx.session.clear()
+    ctx.tui.clear_collapsed_results()
     ctx.tui.show_info("Conversation history cleared.")
 
 
