@@ -156,44 +156,44 @@ it can be wired, and wiring must complete before TUI/REPL integration.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 5. TUI Output Audit Integration
-  - [ ] 5.1 Add `set_audit_logger()` method to `TUIShell`
+- [x] 5. TUI Output Audit Integration
+  - [x] 5.1 Add `set_audit_logger()` method to `TUIShell`
     - Store optional `AuditLogger` reference as `self._audit_logger`
     - Default to `None` in `__init__`
     - _Requirements: 4.1-4.6_
 
-  - [ ] 5.2 Add audit logging to `show_info()`
+  - [x] 5.2 Add audit logging to `show_info()`
     - After console print, call `self._audit_logger.log("INFO", text)`
       if logger is set and active
     - _Requirements: 4.1_
 
-  - [ ] 5.3 Add audit logging to `show_error()`
+  - [x] 5.3 Add audit logging to `show_error()`
     - Log with type `ERROR`
     - _Requirements: 4.2_
 
-  - [ ] 5.4 Add audit logging to `show_warning()`
+  - [x] 5.4 Add audit logging to `show_warning()`
     - Log with type `WARNING`
     - _Requirements: 4.3_
 
-  - [ ] 5.5 Add audit logging to `show_tool_result()`
+  - [x] 5.5 Add audit logging to `show_tool_result()`
     - Log with type `TOOL_RESULT`, content: `"{icon} {name}: {result}"`
     - _Requirements: 4.4_
 
-  - [ ] 5.6 Add audit logging to `finalize_live_text()`
+  - [x] 5.6 Add audit logging to `finalize_live_text()`
     - Log with type `AGENT`, content: full accumulated text
     - Only log if there is non-empty text
     - _Requirements: 4.5_
 
-  - [ ] 5.7 Add audit logging to `show_banner()`
+  - [x] 5.7 Add audit logging to `show_banner()`
     - Log with type `SYSTEM`, content: app name, version, agent info
     - _Requirements: 4.6_
 
-  - [ ] 5.8 Verify transient methods are NOT audited
+  - [x] 5.8 Verify transient methods are NOT audited
     - Confirm `start_spinner`, `stop_spinner`, `start_live_text`,
       `append_live_text` do NOT call the audit logger
     - _Requirements: 4.7_
 
-  - [ ] 5.9 Write unit tests for TUI audit integration
+  - [x] 5.9 Write unit tests for TUI audit integration
     - Mock AuditLogger, verify each show_* method calls `log()` with
       correct entry type
     - Verify no audit calls when logger is None
@@ -203,11 +203,11 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - Verify show_tool_result includes name and result
     - **Validates: Requirements 4.1-4.7**
 
-  - [ ] 5.V Verify task group 5
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "tui_audit or tui_output"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 4.1-4.7 acceptance criteria met
+  - [x] 5.V Verify task group 5
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "tui_audit or tui_output"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 4.1-4.7 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 5 is complete. Do NOT continue to task group 6 in this session. -->
 

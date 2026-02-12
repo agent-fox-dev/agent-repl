@@ -1088,3 +1088,43 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 5 (TUI Output Audit Integration)
+
+---
+
+2026-02-12T22:30:00Z
+Specification: .specs/04_audit_trail
+Task: 5 (TUI Output Audit Integration)
+Branch: feature/tui-audit-integration
+
+Completed:
+- 5.1 Already done in task 3 (set_audit_logger + _audit_logger init)
+- 5.2 tui.py: show_info() logs with type INFO via _audit() helper
+- 5.3 tui.py: show_error() logs with type ERROR
+- 5.4 tui.py: show_warning() logs with type WARNING
+- 5.5 tui.py: show_tool_result() logs with type TOOL_RESULT
+  - Content format: "{icon} {name}: {result}"
+- 5.6 tui.py: finalize_live_text() logs with type AGENT (non-empty only)
+- 5.7 tui.py: show_banner() logs with type SYSTEM
+  - Content: "app vX.Y.Z | Agent: name (model)"
+- 5.8 Verified: start_spinner, stop_spinner, start_live_text, append_live_text
+  do NOT call audit logger
+- Added _audit() private helper for DRY audit logging pattern
+- 5.9 test_tui.py: 20 unit tests
+  - TestTUIAuditShowInfo: 3 tests (active, inactive, no logger)
+  - TestTUIAuditShowError: 2 tests (active, inactive)
+  - TestTUIAuditShowWarning: 2 tests (active, inactive)
+  - TestTUIAuditShowToolResult: 3 tests (success, error, empty result)
+  - TestTUIAuditFinalizeLiveText: 3 tests (logs text, no empty, inactive)
+  - TestTUIAuditShowBanner: 3 tests (with agent, without, agent no model)
+  - TestTUIAuditTransientMethods: 4 tests (spinner start/stop, live start/append)
+- 5.V All verification checks passed
+
+Documentation touched:
+- .specs/04_audit_trail/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 595 passed (was 575, +20 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 6 (Checkpoint) then 7 (REPL Input Audit + /audit Command)
