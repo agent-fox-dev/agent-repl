@@ -211,7 +211,7 @@ it can be wired, and wiring must complete before TUI/REPL integration.
 
 <!-- SESSION BOUNDARY: Task group 5 is complete. Do NOT continue to task group 6 in this session. -->
 
-- [ ] 6. Checkpoint - TUI Audit Integration Complete
+- [x] 6. Checkpoint - TUI Audit Integration Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
