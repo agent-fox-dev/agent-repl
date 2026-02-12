@@ -157,8 +157,8 @@ class TestBuiltinCommandsIntegration:
                      plugin_registry=pr, config=Config())
         await repl.run()
 
-        # show_info called for each command (6 builtins)
-        assert tui.show_info.call_count == 6
+        # show_info called for each command (7 builtins)
+        assert tui.show_info.call_count == 7
 
     @pytest.mark.asyncio
     async def test_version_command(self):

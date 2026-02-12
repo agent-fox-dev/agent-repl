@@ -438,3 +438,110 @@ class TestAuditLoggerWiring:
         handler.assert_called_once()
         ctx = handler.call_args[0][0]
         assert ctx.audit_logger is audit
+
+
+class TestREPLInputAudit:
+    """Test input audit logging in REPL.run()."""
+
+    @pytest.mark.asyncio
+    async def test_free_text_logged_as_input(self):
+        audit = MagicMock()
+        audit.active = True
+        agent = _make_mock_agent()
+        pr = PluginRegistry()
+        pr.set_agent(agent)
+        tui = _make_tui("hello world")
+        repl = REPL(
+            session=Session(), tui=tui,
+            command_registry=CommandRegistry(),
+            plugin_registry=pr, config=Config(),
+            audit_logger=audit,
+        )
+        await repl.run()
+        audit.log.assert_called_with("INPUT", "hello world")
+
+    @pytest.mark.asyncio
+    async def test_slash_command_logged_as_command(self):
+        audit = MagicMock()
+        audit.active = True
+        handler = AsyncMock()
+        reg = CommandRegistry()
+        reg.register(SlashCommand(name="test", description="T", handler=handler))
+        tui = _make_tui("/test arg1")
+        repl = REPL(
+            session=Session(), tui=tui,
+            command_registry=reg,
+            plugin_registry=PluginRegistry(), config=Config(),
+            audit_logger=audit,
+        )
+        await repl.run()
+        audit.log.assert_called_with("COMMAND", "/test arg1")
+
+    @pytest.mark.asyncio
+    async def test_empty_input_not_logged(self):
+        audit = MagicMock()
+        audit.active = True
+        tui = _make_tui("", "   ")
+        repl = REPL(
+            session=Session(), tui=tui,
+            command_registry=CommandRegistry(),
+            plugin_registry=PluginRegistry(), config=Config(),
+            audit_logger=audit,
+        )
+        await repl.run()
+        audit.log.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_no_log_when_inactive(self):
+        audit = MagicMock()
+        audit.active = False
+        agent = _make_mock_agent()
+        pr = PluginRegistry()
+        pr.set_agent(agent)
+        tui = _make_tui("hello")
+        repl = REPL(
+            session=Session(), tui=tui,
+            command_registry=CommandRegistry(),
+            plugin_registry=pr, config=Config(),
+            audit_logger=audit,
+        )
+        await repl.run()
+        audit.log.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_no_crash_when_no_logger(self):
+        agent = _make_mock_agent()
+        pr = PluginRegistry()
+        pr.set_agent(agent)
+        tui = _make_tui("hello")
+        repl = REPL(
+            session=Session(), tui=tui,
+            command_registry=CommandRegistry(),
+            plugin_registry=pr, config=Config(),
+            audit_logger=None,
+        )
+        # Should not raise
+        await repl.run()
+
+    @pytest.mark.asyncio
+    async def test_property_input_classification(self):
+        """Property 6: slash commands get COMMAND, free text gets INPUT."""
+        audit = MagicMock()
+        audit.active = True
+        handler = AsyncMock()
+        reg = CommandRegistry()
+        reg.register(SlashCommand(name="cmd", description="C", handler=handler))
+        agent = _make_mock_agent()
+        pr = PluginRegistry()
+        pr.set_agent(agent)
+        tui = _make_tui("free text", "/cmd")
+        repl = REPL(
+            session=Session(), tui=tui,
+            command_registry=reg,
+            plugin_registry=pr, config=Config(),
+            audit_logger=audit,
+        )
+        await repl.run()
+        calls = audit.log.call_args_list
+        assert calls[0] == (("INPUT", "free text"),)
+        assert calls[1] == (("COMMAND", "/cmd"),)

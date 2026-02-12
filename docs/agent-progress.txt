@@ -1151,3 +1151,44 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 7 (REPL Input Audit + /audit Command)
+
+---
+
+2026-02-12T23:30:00Z
+Specification: .specs/04_audit_trail
+Task: 7 (REPL Input Audit and /audit Command)
+Branch: feature/repl-audit-command
+
+Completed:
+- 7.1 repl.py: Added input audit logging in run()
+  - After prompt_input(), before parse_input()
+  - Slash commands logged as COMMAND, free text as INPUT
+  - Empty/whitespace input not logged
+  - Guards: only logs when audit_logger is set and active
+- 7.2 builtin_commands.py: Implemented _handle_audit() handler
+  - Toggles auditing on/off via ctx.audit_logger
+  - Shows "Audit started: {path}" or "Audit stopped: {path}"
+  - Catches OSError on start failure, shows error
+  - Shows "Audit logger not available" if logger is None
+- 7.3 builtin_commands.py: Registered /audit SlashCommand
+  - cli_exposed=True for CLI invocation
+  - Updated command count from 6 to 7
+- 7.4 test_repl.py: 6 tests for REPL input auditing
+  - free text → INPUT, slash command → COMMAND, empty not logged
+  - inactive logger → no log, None logger → no crash
+  - Property 6 (Input Classification)
+- 7.5 test_builtin_commands.py: 5 tests for /audit command
+  - toggle on, toggle off, start failure, no logger, cli_exposed
+- Updated test_builtin_commands.py: command count 6→7
+- Updated test_integration.py: help command count 6→7
+- 7.V All verification checks passed
+
+Documentation touched:
+- .specs/04_audit_trail/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 606 passed (was 595, +11 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 8 (Checkpoint) then 9 (Integration Tests and Property Tests)
