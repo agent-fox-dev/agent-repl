@@ -545,3 +545,37 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 5 (Ctrl+O Expand Shortcut)
+
+---
+
+2026-02-12T14:00:00Z
+Specification: .specs/02_tool_display_enhancement
+Task: 5 (Ctrl+O Expand Shortcut)
+Branch: feature/ctrl-o-expand
+
+Completed:
+- 5.1 tui.py: Added Ctrl+O key binding in TUIShell.__init__()
+  - Guards against activation during live streaming or spinner
+  - Shows "No collapsed output to expand." when list is empty
+  - Calls show_expanded_result() when results exist
+- 5.2 tui.py: Added show_expanded_result() method
+  - Displays last element of _collapsed_results in dim style
+- 5.3 tui.py: Updated collapse hint to include "(Ctrl+O to expand)"
+  - e.g., "▸ 4 more lines (Ctrl+O to expand)"
+- 5.4 test_tui.py: 9 unit tests for Ctrl+O expand behavior
+  - No results shows nothing, single result expand, most recent expand,
+    hint references shortcut, binding registered, no action during live,
+    no action during spinner, empty shows info message
+  - Property 8 (Expand Index Validity)
+- 5.V All verification checks passed
+- Added _find_key_handler() test helper for key binding invocation
+
+Documentation touched:
+- .specs/02_tool_display_enhancement/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 456 passed (was 447, +9 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 6 (Checkpoint) then 7 (Integration Tests and Cleanup)

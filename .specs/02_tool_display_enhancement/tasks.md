@@ -135,8 +135,8 @@ stored results for 3.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 5. Ctrl+O Expand Shortcut
-  - [ ] 5.1 Add `Ctrl+O` key binding in `TUIShell.__init__()`
+- [x] 5. Ctrl+O Expand Shortcut
+  - [x] 5.1 Add `Ctrl+O` key binding in `TUIShell.__init__()`
     - Add `@self._kb.add("c-o")` handler alongside existing `Ctrl+Y` binding
     - If `_collapsed_results` is non-empty, call `show_expanded_result()`
     - If empty, show info message: "No collapsed output to expand."
@@ -144,16 +144,16 @@ stored results for 3.
       `_spinner_active`)
     - _Requirements: 4.1, 4.2, 4.3, 4.5, Edge Cases 4.1, 4.2_
 
-  - [ ] 5.2 Implement `show_expanded_result()` method
+  - [x] 5.2 Implement `show_expanded_result()` method
     - Display the last element of `_collapsed_results` in dim style
     - _Requirements: 4.2, 4.4_
 
-  - [ ] 5.3 Update collapse hint to reference shortcut
+  - [x] 5.3 Update collapse hint to reference shortcut
     - Change hint format to include "(Ctrl+O to expand)"
     - e.g., "▸ 47 more lines (Ctrl+O to expand)"
     - _Requirements: 4.6_
 
-  - [ ] 5.4 Write unit tests for `Ctrl+O` expand behavior
+  - [x] 5.4 Write unit tests for `Ctrl+O` expand behavior
     - No collapsed results -> info message
     - Single collapsed result -> shows full output in dim style
     - Multiple collapsed results -> shows most recent only
@@ -162,11 +162,11 @@ stored results for 3.
     - **Property 8: Expand Index Validity**
     - **Validates: Requirements 4.1-4.6**
 
-  - [ ] 5.V Verify task group 5
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "expand"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 4.1-4.6 acceptance criteria met
+  - [x] 5.V Verify task group 5
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "expand"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 4.1-4.6 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 5 is complete. Do NOT continue to task group 6 in this session. -->
 
