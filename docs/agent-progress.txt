@@ -895,3 +895,57 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 9 (Integration Tests and End-to-End Validation)
+
+---
+
+2026-02-12T20:00:00Z
+Specification: .specs/03_agent_input_requests
+Task: 9 (Integration Tests and End-to-End Validation)
+Branch: feature/input-request-integration-tests
+
+Completed:
+- 9.1 Mock agent async generators with asyncio.Future bidirectional channel
+  - _agent_approval_stream: text → approval request → conditional text
+  - _agent_choice_stream: text → choice request → uses selected value
+  - _agent_text_stream: text → text request → uses provided text
+  - _agent_multi_request_stream: two sequential approval requests
+- 9.2 Integration test: approval approve path
+  - Full flow verified: text + approval + more text, future resolved,
+    complete turn, token usage, spinner paused, session history
+- 9.3 Integration test: approval reject path
+  - Rejection cancels stream, partial content preserved, info message shown
+- 9.4 Integration test: choice flow
+  - User selects option 2, agent receives {"index": 1, "value": "Wrench"},
+    continues with chosen value in response
+- 9.5 Integration test: text input flow
+  - User provides "/home/user/project", agent receives exact text, continues
+- 9.6 Integration test: multiple input requests
+  - Two sequential approvals both handled, full text accumulated
+  - Second request rejected: partial content preserved
+- 9.7 Property-based tests: Property 3 (approval binary e2e),
+  Property 4 (choice index range with 2-20 items)
+- 9.8 Updated integration test mock to include prompt_approval/choice/text_input
+  - Added TestUnknownEventTypeIgnored test for existing compatibility
+- 9.V All verification checks passed
+
+All 8 Correctness Properties:
+  1. Stream Pause Guarantee (test_stream_handler.py)
+  2. Future Resolution Guarantee (test_stream_handler.py)
+  3. Approval Binary Constraint (test_tui.py + test_stream_handler.py)
+  4. Choice Index Validity (test_tui.py + test_stream_handler.py)
+  5. Rejection Cancels Stream (test_stream_handler.py)
+  6. UI State Cleanup Before Prompt (test_stream_handler.py)
+  7. History Preservation on Rejection (test_stream_handler.py)
+  8. Re-prompt on Invalid Input (test_tui.py)
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 530 passed (was 521, +9 new)
+- uv run pytest tests/ -q -k "property" → 42 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Spec 03 (Agent Input Requests) is now COMPLETE.
+All 9 task groups finished. All requirements 1.1-6.5 implemented and tested.

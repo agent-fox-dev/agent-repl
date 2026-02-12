@@ -89,6 +89,9 @@ def _make_tui(*inputs: str | BaseException) -> MagicMock:
     tui.show_tool_use = MagicMock()
     tui.show_tool_result = MagicMock()
     tui.clear_collapsed_results = MagicMock()
+    tui.prompt_approval = AsyncMock(return_value="approve")
+    tui.prompt_choice = AsyncMock(return_value={"index": 0, "value": "opt"})
+    tui.prompt_text_input = AsyncMock(return_value="text")
     return tui
 
 
