@@ -264,6 +264,44 @@ class TUIShell:
             return None
         return " | ".join(hints)
 
+    async def prompt_approval(self, prompt: str, choices: list[str]) -> str:
+        """Display binary approval prompt. Returns 'approve' or 'reject'."""
+        # Render prompt text
+        self._console.print(Text(prompt))
+
+        # Render choice labels
+        approve_label = choices[0] if len(choices) > 0 else "Approve"
+        reject_label = choices[1] if len(choices) > 1 else "Reject"
+        line = Text()
+        line.append(f"[a] {approve_label}", style=self._theme.info_color)
+        line.append("  ")
+        line.append(f"[r] {reject_label}", style=self._theme.error_color)
+        self._console.print(line)
+
+        # Dedicated prompt session for approval input
+        approval_session: PromptSession[str] = PromptSession()
+
+        while True:
+            try:
+                answer = await approval_session.prompt_async(
+                    HTML(f"<style fg='{self._theme.info_color}'>? </style>"),
+                )
+            except KeyboardInterrupt:
+                return "reject"
+
+            answer = answer.strip().lower()
+            if answer in ("a", "1"):
+                return "approve"
+            elif answer in ("r", "2"):
+                return "reject"
+            else:
+                self._console.print(
+                    Text(
+                        "Invalid input. Enter a/1 to approve or r/2 to reject.",
+                        style="dim",
+                    )
+                )
+
     @property
     def console(self) -> Console:
         """Expose console for testing."""
