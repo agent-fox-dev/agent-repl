@@ -26,19 +26,19 @@ it can be wired, and wiring must complete before TUI/REPL integration.
 
 ## Tasks
 
-- [ ] 1. AuditLogger Core
-  - [ ] 1.1 Create `src/agent_repl/audit_logger.py`
+- [x] 1. AuditLogger Core
+  - [x] 1.1 Create `src/agent_repl/audit_logger.py`
     - `AuditLogger` class with `__init__(directory: str = ".af")`
     - Internal state: `_directory`, `_file` (TextIO | None), `_file_path`
       (str | None), `_active` (bool)
     - Properties: `active` (bool), `file_path` (str | None)
     - _Requirements: 1.3, 1.4_
 
-  - [ ] 1.2 Implement `_generate_filename()` method
+  - [x] 1.2 Implement `_generate_filename()` method
     - Return `audit_YYYYMMDD_HHMMSS.log` using `datetime.now()`
     - _Requirements: 1.4_
 
-  - [ ] 1.3 Implement `start()` method
+  - [x] 1.3 Implement `start()` method
     - Create `.af/` directory if it doesn't exist (`os.makedirs(exist_ok=True)`)
     - Generate filename, build full path
     - Open file in append mode
@@ -48,13 +48,13 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - On failure: raise `OSError` (caller handles)
     - _Requirements: 1.3, 1.5, 6.4, 6.5, Edge Cases 1.E1, 1.E2_
 
-  - [ ] 1.4 Implement `stop()` method
+  - [x] 1.4 Implement `stop()` method
     - Write `[SYSTEM] Audit stopped` entry
     - Flush and close file
     - Set `_active = False`
     - _Requirements: 2.5, 6.6_
 
-  - [ ] 1.5 Implement `log(entry_type, content)` method
+  - [x] 1.5 Implement `log(entry_type, content)` method
     - No-op if not active
     - Format: `[{ISO 8601 timestamp}] [{entry_type}] {content}`
     - Timestamp: `datetime.now().isoformat(timespec="milliseconds")`
@@ -63,11 +63,11 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - On I/O error: log warning, set `_active = False`, close file
     - _Requirements: 5.1, 5.2, 5.3, 6.1, Edge Cases 6.E1, 6.E2_
 
-  - [ ] 1.6 Implement `_write_entry()` internal method
+  - [x] 1.6 Implement `_write_entry()` internal method
     - Shared formatting logic for `log()`, start, and stop
     - _Requirements: 5.3_
 
-  - [ ] 1.7 Write unit tests for AuditLogger
+  - [x] 1.7 Write unit tests for AuditLogger
     - `start()` creates file in directory
     - `start()` creates directory if missing
     - `start()` raises OSError if directory unwritable
@@ -89,11 +89,11 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - **Property 8: Graceful Failure**
     - **Validates: Requirements 1.3-1.5, 5.1-5.3, 6.1-6.6**
 
-  - [ ] 1.V Verify task group 1
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "audit_logger"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 1.3-1.5, 5.1-5.3, 6.1-6.6 acceptance criteria met
+  - [x] 1.V Verify task group 1
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "audit_logger"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 1.3-1.5, 5.1-5.3, 6.1-6.6 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 1 is complete. Do NOT continue to task group 2 in this session. -->
 
