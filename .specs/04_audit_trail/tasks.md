@@ -26,19 +26,19 @@ it can be wired, and wiring must complete before TUI/REPL integration.
 
 ## Tasks
 
-- [ ] 1. AuditLogger Core
-  - [ ] 1.1 Create `src/agent_repl/audit_logger.py`
+- [x] 1. AuditLogger Core
+  - [x] 1.1 Create `src/agent_repl/audit_logger.py`
     - `AuditLogger` class with `__init__(directory: str = ".af")`
     - Internal state: `_directory`, `_file` (TextIO | None), `_file_path`
       (str | None), `_active` (bool)
     - Properties: `active` (bool), `file_path` (str | None)
     - _Requirements: 1.3, 1.4_
 
-  - [ ] 1.2 Implement `_generate_filename()` method
+  - [x] 1.2 Implement `_generate_filename()` method
     - Return `audit_YYYYMMDD_HHMMSS.log` using `datetime.now()`
     - _Requirements: 1.4_
 
-  - [ ] 1.3 Implement `start()` method
+  - [x] 1.3 Implement `start()` method
     - Create `.af/` directory if it doesn't exist (`os.makedirs(exist_ok=True)`)
     - Generate filename, build full path
     - Open file in append mode
@@ -48,13 +48,13 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - On failure: raise `OSError` (caller handles)
     - _Requirements: 1.3, 1.5, 6.4, 6.5, Edge Cases 1.E1, 1.E2_
 
-  - [ ] 1.4 Implement `stop()` method
+  - [x] 1.4 Implement `stop()` method
     - Write `[SYSTEM] Audit stopped` entry
     - Flush and close file
     - Set `_active = False`
     - _Requirements: 2.5, 6.6_
 
-  - [ ] 1.5 Implement `log(entry_type, content)` method
+  - [x] 1.5 Implement `log(entry_type, content)` method
     - No-op if not active
     - Format: `[{ISO 8601 timestamp}] [{entry_type}] {content}`
     - Timestamp: `datetime.now().isoformat(timespec="milliseconds")`
@@ -63,11 +63,11 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - On I/O error: log warning, set `_active = False`, close file
     - _Requirements: 5.1, 5.2, 5.3, 6.1, Edge Cases 6.E1, 6.E2_
 
-  - [ ] 1.6 Implement `_write_entry()` internal method
+  - [x] 1.6 Implement `_write_entry()` internal method
     - Shared formatting logic for `log()`, start, and stop
     - _Requirements: 5.3_
 
-  - [ ] 1.7 Write unit tests for AuditLogger
+  - [x] 1.7 Write unit tests for AuditLogger
     - `start()` creates file in directory
     - `start()` creates directory if missing
     - `start()` raises OSError if directory unwritable
@@ -89,53 +89,53 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - **Property 8: Graceful Failure**
     - **Validates: Requirements 1.3-1.5, 5.1-5.3, 6.1-6.6**
 
-  - [ ] 1.V Verify task group 1
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "audit_logger"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 1.3-1.5, 5.1-5.3, 6.1-6.6 acceptance criteria met
+  - [x] 1.V Verify task group 1
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "audit_logger"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 1.3-1.5, 5.1-5.3, 6.1-6.6 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 1 is complete. Do NOT continue to task group 2 in this session. -->
 
-- [ ] 2. Checkpoint - AuditLogger Core Complete
+- [x] 2. Checkpoint - AuditLogger Core Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 3. Config and App Wiring
-  - [ ] 3.1 Add `audit: bool = False` to `Config` dataclass
+- [x] 3. Config and App Wiring
+  - [x] 3.1 Add `audit: bool = False` to `Config` dataclass
     - Add field to `Config` in `types.py`
     - _Requirements: 1.1_
 
-  - [ ] 3.2 Add `audit_logger: Any = None` to `CommandContext`
+  - [x] 3.2 Add `audit_logger: Any = None` to `CommandContext`
     - Add field to `CommandContext` in `types.py`
     - _Requirements: (needed for /audit command handler access)_
 
-  - [ ] 3.3 Wire AuditLogger in `App.__init__()`
+  - [x] 3.3 Wire AuditLogger in `App.__init__()`
     - Create `self._audit_logger = AuditLogger()`
     - _Requirements: 1.2_
 
-  - [ ] 3.4 Wire AuditLogger in `App._setup()`
+  - [x] 3.4 Wire AuditLogger in `App._setup()`
     - Call `self._tui.set_audit_logger(self._audit_logger)`
     - If `self._config.audit` is True, call `self._audit_logger.start()`
       wrapped in try/except OSError
     - _Requirements: 1.2, Edge Cases 1.E1, 1.E2_
 
-  - [ ] 3.5 Wire AuditLogger in `App.run()`
+  - [x] 3.5 Wire AuditLogger in `App.run()`
     - Pass `self._audit_logger` to `REPL` constructor
     - After REPL exits, call `self._audit_logger.stop()` if active
     - _Requirements: 6.2, 6.3_
 
-  - [ ] 3.6 Update `REPL.__init__()` to accept `AuditLogger`
+  - [x] 3.6 Update `REPL.__init__()` to accept `AuditLogger`
     - Add optional `audit_logger` parameter
     - Store as `self._audit_logger`
     - _Requirements: 3.1_
 
-  - [ ] 3.7 Pass `audit_logger` through `CommandContext` in REPL
+  - [x] 3.7 Pass `audit_logger` through `CommandContext` in REPL
     - In `_handle_command()`, set `ctx.audit_logger = self._audit_logger`
     - _Requirements: (needed for /audit command)_
 
-  - [ ] 3.8 Write unit tests for Config and App wiring
+  - [x] 3.8 Write unit tests for Config and App wiring
     - `Config(audit=True)` field exists and defaults to False
     - `App._setup()` starts auditing when `config.audit=True`
     - `App._setup()` handles start failure gracefully
@@ -143,57 +143,57 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - REPL receives audit_logger
     - **Validates: Requirements 1.1, 1.2, 6.2, 6.3**
 
-  - [ ] 3.V Verify task group 3
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "audit"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 1.1-1.2, 6.2-6.3 acceptance criteria met
+  - [x] 3.V Verify task group 3
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "audit"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 1.1-1.2, 6.2-6.3 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 3 is complete. Do NOT continue to task group 4 in this session. -->
 
-- [ ] 4. Checkpoint - App Wiring Complete
+- [x] 4. Checkpoint - App Wiring Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 5. TUI Output Audit Integration
-  - [ ] 5.1 Add `set_audit_logger()` method to `TUIShell`
+- [x] 5. TUI Output Audit Integration
+  - [x] 5.1 Add `set_audit_logger()` method to `TUIShell`
     - Store optional `AuditLogger` reference as `self._audit_logger`
     - Default to `None` in `__init__`
     - _Requirements: 4.1-4.6_
 
-  - [ ] 5.2 Add audit logging to `show_info()`
+  - [x] 5.2 Add audit logging to `show_info()`
     - After console print, call `self._audit_logger.log("INFO", text)`
       if logger is set and active
     - _Requirements: 4.1_
 
-  - [ ] 5.3 Add audit logging to `show_error()`
+  - [x] 5.3 Add audit logging to `show_error()`
     - Log with type `ERROR`
     - _Requirements: 4.2_
 
-  - [ ] 5.4 Add audit logging to `show_warning()`
+  - [x] 5.4 Add audit logging to `show_warning()`
     - Log with type `WARNING`
     - _Requirements: 4.3_
 
-  - [ ] 5.5 Add audit logging to `show_tool_result()`
+  - [x] 5.5 Add audit logging to `show_tool_result()`
     - Log with type `TOOL_RESULT`, content: `"{icon} {name}: {result}"`
     - _Requirements: 4.4_
 
-  - [ ] 5.6 Add audit logging to `finalize_live_text()`
+  - [x] 5.6 Add audit logging to `finalize_live_text()`
     - Log with type `AGENT`, content: full accumulated text
     - Only log if there is non-empty text
     - _Requirements: 4.5_
 
-  - [ ] 5.7 Add audit logging to `show_banner()`
+  - [x] 5.7 Add audit logging to `show_banner()`
     - Log with type `SYSTEM`, content: app name, version, agent info
     - _Requirements: 4.6_
 
-  - [ ] 5.8 Verify transient methods are NOT audited
+  - [x] 5.8 Verify transient methods are NOT audited
     - Confirm `start_spinner`, `stop_spinner`, `start_live_text`,
       `append_live_text` do NOT call the audit logger
     - _Requirements: 4.7_
 
-  - [ ] 5.9 Write unit tests for TUI audit integration
+  - [x] 5.9 Write unit tests for TUI audit integration
     - Mock AuditLogger, verify each show_* method calls `log()` with
       correct entry type
     - Verify no audit calls when logger is None
@@ -203,28 +203,28 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - Verify show_tool_result includes name and result
     - **Validates: Requirements 4.1-4.7**
 
-  - [ ] 5.V Verify task group 5
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "tui_audit or tui_output"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 4.1-4.7 acceptance criteria met
+  - [x] 5.V Verify task group 5
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "tui_audit or tui_output"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 4.1-4.7 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 5 is complete. Do NOT continue to task group 6 in this session. -->
 
-- [ ] 6. Checkpoint - TUI Audit Integration Complete
+- [x] 6. Checkpoint - TUI Audit Integration Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 7. REPL Input Audit and /audit Command
-  - [ ] 7.1 Add input audit logging to `REPL.run()`
+- [x] 7. REPL Input Audit and /audit Command
+  - [x] 7.1 Add input audit logging to `REPL.run()`
     - After `prompt_input()` and before `parse_input()`, log the raw input
     - If input starts with `/`: log with type `COMMAND`
     - Otherwise: log with type `INPUT`
     - Only log non-empty (stripped) input
     - _Requirements: 3.1, 3.2, 3.3, 3.4, Edge Case 3.E1_
 
-  - [ ] 7.2 Implement `_handle_audit()` command handler
+  - [x] 7.2 Implement `_handle_audit()` command handler
     - Add handler function in `builtin_commands.py`
     - Access `AuditLogger` via `ctx.audit_logger`
     - If `audit_logger` is None: show error
@@ -233,11 +233,11 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - Catch OSError from `start()` and show error
     - _Requirements: 2.2, 2.3, 2.4, 2.5, Edge Case 2.E1_
 
-  - [ ] 7.3 Register `/audit` in `BuiltinCommandsPlugin.get_commands()`
+  - [x] 7.3 Register `/audit` in `BuiltinCommandsPlugin.get_commands()`
     - Add SlashCommand with `name="audit"`, `cli_exposed=True`
     - _Requirements: 2.1, 2.6_
 
-  - [ ] 7.4 Write unit tests for REPL input auditing
+  - [x] 7.4 Write unit tests for REPL input auditing
     - Free text input logged as `INPUT`
     - Slash command logged as `COMMAND`
     - Empty input not logged
@@ -246,7 +246,7 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - **Property 6: Input Classification**
     - **Validates: Requirements 3.1-3.4, Edge Case 3.E1**
 
-  - [ ] 7.5 Write unit tests for `/audit` command
+  - [x] 7.5 Write unit tests for `/audit` command
     - Toggle on: calls start(), shows path
     - Toggle off: calls stop(), shows path
     - Start failure: shows error, stays off
@@ -254,21 +254,21 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - CLI-exposed flag is True
     - **Validates: Requirements 2.1-2.6, Edge Case 2.E1**
 
-  - [ ] 7.V Verify task group 7
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "audit"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 2.1-2.6, 3.1-3.4 acceptance criteria met
+  - [x] 7.V Verify task group 7
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "audit"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 2.1-2.6, 3.1-3.4 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 7 is complete. Do NOT continue to task group 8 in this session. -->
 
-- [ ] 8. Checkpoint - REPL and Command Complete
+- [x] 8. Checkpoint - REPL and Command Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 9. Integration Tests and Property Tests
-  - [ ] 9.1 Write integration test: full session with audit
+- [x] 9. Integration Tests and Property Tests
+  - [x] 9.1 Write integration test: full session with audit
     - Create App with `Config(audit=True)`
     - Simulate: banner → user input → agent response → tool use →
       command → exit
@@ -278,20 +278,20 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - **Property 5: Start/Stop Bookends**
     - **Validates: Requirements 1.2, 4.1-4.6, 6.5, 6.6**
 
-  - [ ] 9.2 Write integration test: /audit toggle mid-session
+  - [x] 9.2 Write integration test: /audit toggle mid-session
     - Start without audit, invoke `/audit` to enable
     - Verify new file created
     - Invoke `/audit` again to disable
     - Verify file closed and contains correct entries
     - **Validates: Requirements 2.2-2.5**
 
-  - [ ] 9.3 Write integration test: audit file survives crash
+  - [x] 9.3 Write integration test: audit file survives crash
     - Start audit, write entries, simulate crash (don't call stop)
     - Verify file contains flushed entries up to crash point
     - **Property 3: Flush Per Entry**
     - **Validates: Requirement 6.4**
 
-  - [ ] 9.4 Write property-based tests
+  - [x] 9.4 Write property-based tests
     - Generate arbitrary strings, verify entry format regex (Property 2)
     - Generate sequences of log calls, verify timestamp ordering
       (Property 1)
@@ -299,17 +299,17 @@ it can be wired, and wiring must complete before TUI/REPL integration.
       (Property 6)
     - **Validates: Properties 1, 2, 6**
 
-  - [ ] 9.5 Update existing tests
+  - [x] 9.5 Update existing tests
     - Ensure App tests pass with new `audit` config field
     - Ensure REPL tests pass with optional `audit_logger` parameter
     - Ensure TUI tests pass with `_audit_logger = None` default
     - _Requirements: all_
 
-  - [ ] 9.V Verify task group 9
-    - [ ] All new tests pass: `uv run pytest -q tests/`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] All 8 correctness properties validated by tests
+  - [x] 9.V Verify task group 9
+    - [x] All new tests pass: `uv run pytest -q tests/`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] All 8 correctness properties validated by tests
 
 <!-- SESSION BOUNDARY -->
 

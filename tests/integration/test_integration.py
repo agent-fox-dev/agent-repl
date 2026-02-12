@@ -157,8 +157,8 @@ class TestBuiltinCommandsIntegration:
                      plugin_registry=pr, config=Config())
         await repl.run()
 
-        # show_info called for each command (6 builtins)
-        assert tui.show_info.call_count == 6
+        # show_info called for each command (7 builtins)
+        assert tui.show_info.call_count == 7
 
     @pytest.mark.asyncio
     async def test_version_command(self):
@@ -369,3 +369,180 @@ class TestErrorRecovery:
         await repl.run()
 
         assert tui.show_error.call_count == 2
+
+
+# --- Audit Trail Integration Tests ---
+
+
+class TestAuditFullSession:
+    """Integration test: full session with audit enabled.
+
+    Property 5: Start/Stop Bookends.
+    Validates: Requirements 1.2, 4.1-4.6, 6.5, 6.6.
+    """
+
+    @pytest.mark.asyncio
+    async def test_full_session_audit_file(self):
+        """Banner → user input → agent echo → /version → /quit."""
+        import re
+
+        from agent_repl.audit_logger import AuditLogger
+        from agent_repl.builtin_commands import BuiltinCommandsPlugin
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audit = AuditLogger(directory=tmpdir)
+            audit.start()
+
+            session = Session()
+            tui = _make_tui("hello world", "/version", "/quit")
+            reg = CommandRegistry()
+            pr = PluginRegistry()
+
+            builtin = BuiltinCommandsPlugin()
+            pr.register(builtin, reg)
+
+            agent = IntegrationEchoAgent()
+            pr.register(agent, reg)
+
+            # Wire audit to TUI mock
+            tui.show_info = MagicMock(
+                side_effect=lambda text: audit.log("INFO", text)
+            )
+            tui.show_error = MagicMock(
+                side_effect=lambda text: audit.log("ERROR", text)
+            )
+            tui.finalize_live_text = MagicMock()
+
+            repl = REPL(
+                session=session,
+                tui=tui,
+                command_registry=reg,
+                plugin_registry=pr,
+                config=Config(),
+                audit_logger=audit,
+            )
+            await repl.run()
+            audit.stop()
+
+            # Read the audit file
+            with open(audit.file_path) as f:
+                content = f.read()
+                lines = content.strip().split("\n")
+
+            # Property 5: first entry is SYSTEM Audit started
+            assert "[SYSTEM] Audit started" in lines[0]
+
+            # Property 5: last entry is SYSTEM Audit stopped
+            assert "[SYSTEM] Audit stopped" in lines[-1]
+
+            # Verify user input was logged
+            input_lines = [ln for ln in lines if "[INPUT]" in ln]
+            assert len(input_lines) == 1
+            assert "hello world" in input_lines[0]
+
+            # Verify commands were logged
+            cmd_lines = [ln for ln in lines if "[COMMAND]" in ln]
+            assert len(cmd_lines) == 2  # /version and /quit
+            assert "/version" in cmd_lines[0]
+            assert "/quit" in cmd_lines[1]
+
+            # Verify INFO entries present (from /version handler)
+            info_lines = [ln for ln in lines if "[INFO]" in ln]
+            assert len(info_lines) >= 1
+
+            # Verify all entries match the format
+            pattern = re.compile(
+                r"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}\] \[\w+\] .*"
+            )
+            for line in lines:
+                assert pattern.match(line), f"Line didn't match: {line!r}"
+
+
+class TestAuditToggleMidSession:
+    """Integration test: /audit toggle mid-session.
+
+    Validates: Requirements 2.2-2.5.
+    """
+
+    @pytest.mark.asyncio
+    async def test_toggle_on_off(self):
+        from agent_repl.audit_logger import AuditLogger
+        from agent_repl.builtin_commands import BuiltinCommandsPlugin
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audit = AuditLogger(directory=tmpdir)
+
+            session = Session()
+            # /audit (enable) → "hello" → /audit (disable)
+            tui = _make_tui("/audit", "hello", "/audit")
+            reg = CommandRegistry()
+            pr = PluginRegistry()
+
+            builtin = BuiltinCommandsPlugin()
+            pr.register(builtin, reg)
+
+            agent = IntegrationEchoAgent()
+            pr.register(agent, reg)
+
+            # Wire show_info to capture messages
+            info_messages: list[str] = []
+            tui.show_info = MagicMock(
+                side_effect=lambda text: info_messages.append(text)
+            )
+
+            repl = REPL(
+                session=session,
+                tui=tui,
+                command_registry=reg,
+                plugin_registry=pr,
+                config=Config(),
+                audit_logger=audit,
+            )
+            await repl.run()
+
+            # Verify file was created and then closed
+            assert audit.active is False
+            assert audit.file_path is not None
+            assert os.path.exists(audit.file_path)
+
+            # Verify the messages
+            assert any("Audit started" in m for m in info_messages)
+            assert any("Audit stopped" in m for m in info_messages)
+
+            # Verify file contents: started, INPUT hello, stopped
+            with open(audit.file_path) as f:
+                content = f.read()
+            assert "[SYSTEM] Audit started" in content
+            assert "[INPUT] hello" in content
+            assert "[SYSTEM] Audit stopped" in content
+
+
+class TestAuditCrashSurvival:
+    """Integration test: audit file survives crash.
+
+    Property 3: Flush Per Entry.
+    Validates: Requirement 6.4.
+    """
+
+    def test_entries_flushed_without_stop(self):
+        from agent_repl.audit_logger import AuditLogger
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audit = AuditLogger(directory=tmpdir)
+            path = audit.start()
+            audit.log("INPUT", "before crash")
+            audit.log("INFO", "more data")
+
+            # Simulate crash: DON'T call stop()
+            # Read the file - entries should be flushed
+            with open(path) as f:
+                content = f.read()
+
+            assert "[SYSTEM] Audit started" in content
+            assert "[INPUT] before crash" in content
+            assert "[INFO] more data" in content
+            # No [SYSTEM] Audit stopped entry
+            assert "[SYSTEM] Audit stopped" not in content
+
+            # Clean up manually
+            audit._file.close()

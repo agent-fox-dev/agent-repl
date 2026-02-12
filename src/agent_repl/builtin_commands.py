@@ -45,6 +45,12 @@ class BuiltinCommandsPlugin:
                 description="Show token usage statistics",
                 handler=_handle_stats,
             ),
+            SlashCommand(
+                name="audit",
+                description="Toggle audit trail recording",
+                handler=_handle_audit,
+                cli_exposed=True,
+            ),
         ]
 
     async def on_load(self, context: PluginContext) -> None:
@@ -100,3 +106,21 @@ async def _handle_stats(ctx: CommandContext) -> None:
     stats = ctx.session.stats
     ctx.tui.show_info(f"Sent: {stats.format_input()}")
     ctx.tui.show_info(f"Received: {stats.format_output()}")
+
+
+async def _handle_audit(ctx: CommandContext) -> None:
+    """Toggle audit trail recording."""
+    audit = ctx.audit_logger
+    if audit is None:
+        ctx.tui.show_error("Audit logger not available.")
+        return
+    if audit.active:
+        path = audit.file_path
+        audit.stop()
+        ctx.tui.show_info(f"Audit stopped: {path}")
+    else:
+        try:
+            path = audit.start()
+            ctx.tui.show_info(f"Audit started: {path}")
+        except OSError as e:
+            ctx.tui.show_error(f"Failed to start audit: {e}")

@@ -85,11 +85,11 @@ class TestPluginProtocol:
     def test_has_description(self, plugin: BuiltinCommandsPlugin):
         assert plugin.description == "Built-in REPL commands"
 
-    def test_get_commands_returns_six(self, plugin: BuiltinCommandsPlugin):
+    def test_get_commands_returns_seven(self, plugin: BuiltinCommandsPlugin):
         commands = plugin.get_commands()
-        assert len(commands) == 6
+        assert len(commands) == 7
         names = {cmd.name for cmd in commands}
-        assert names == {"help", "quit", "version", "copy", "agent", "stats"}
+        assert names == {"help", "quit", "version", "copy", "agent", "stats", "audit"}
 
     @pytest.mark.asyncio
     async def test_on_load(self, plugin: BuiltinCommandsPlugin):
@@ -120,7 +120,7 @@ class TestHelp:
         cmd = registry.get("help")
         await cmd.handler(ctx)
         # show_info called once per command (6 total)
-        assert tui_mock.show_info.call_count == 6
+        assert tui_mock.show_info.call_count == 7
         # Check some command names appear
         all_output = " ".join(call.args[0] for call in tui_mock.show_info.call_args_list)
         assert "/help" in all_output
@@ -322,3 +322,84 @@ class TestStats:
         received = tui_mock.show_info.call_args_list[1][0][0]
         assert "3.21 k tokens" in sent
         assert "1.50 k tokens" in received
+
+
+class TestAuditCommand:
+    """Requirements 2.1-2.6: /audit command."""
+
+    @pytest.mark.asyncio
+    async def test_toggle_on(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        audit = MagicMock()
+        audit.active = False
+        audit.start = MagicMock(return_value="/tmp/audit.log")
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        ctx.audit_logger = audit
+        cmd = registry.get("audit")
+        await cmd.handler(ctx)
+        audit.start.assert_called_once()
+        output = tui_mock.show_info.call_args[0][0]
+        assert "Audit started" in output
+        assert "/tmp/audit.log" in output
+
+    @pytest.mark.asyncio
+    async def test_toggle_off(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        audit = MagicMock()
+        audit.active = True
+        audit.file_path = "/tmp/audit.log"
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        ctx.audit_logger = audit
+        cmd = registry.get("audit")
+        await cmd.handler(ctx)
+        audit.stop.assert_called_once()
+        output = tui_mock.show_info.call_args[0][0]
+        assert "Audit stopped" in output
+        assert "/tmp/audit.log" in output
+
+    @pytest.mark.asyncio
+    async def test_start_failure(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        audit = MagicMock()
+        audit.active = False
+        audit.start = MagicMock(side_effect=OSError("permission denied"))
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        ctx.audit_logger = audit
+        cmd = registry.get("audit")
+        await cmd.handler(ctx)
+        tui_mock.show_error.assert_called_once()
+        assert "Failed to start audit" in tui_mock.show_error.call_args[0][0]
+
+    @pytest.mark.asyncio
+    async def test_no_logger(
+        self,
+        registry: CommandRegistry,
+        session: Session,
+        tui_mock: MagicMock,
+        plugin_registry_mock: MagicMock,
+    ):
+        ctx = _make_ctx(registry, session, tui_mock, plugin_registry_mock)
+        ctx.audit_logger = None
+        cmd = registry.get("audit")
+        await cmd.handler(ctx)
+        tui_mock.show_error.assert_called_once()
+        assert "not available" in tui_mock.show_error.call_args[0][0]
+
+    def test_cli_exposed(self, registry: CommandRegistry):
+        cmd = registry.get("audit")
+        assert cmd.cli_exposed is True

@@ -79,6 +79,7 @@ class Config:
     max_pinned_display: int = 6
     max_file_size: int = 512_000
     cli_commands: list[str] = field(default_factory=list)
+    audit: bool = False
 
 
 @dataclass
@@ -104,6 +105,7 @@ class CommandContext:
     config: Config = field(default_factory=Config)
     registry: Any = None
     plugin_registry: Any = None
+    audit_logger: Any = None
 
 
 @dataclass

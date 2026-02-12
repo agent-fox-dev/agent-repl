@@ -10,6 +10,7 @@ from agent_repl.stream_handler import StreamHandler
 from agent_repl.types import CommandContext, ConversationTurn, MessageContext
 
 if TYPE_CHECKING:
+    from agent_repl.audit_logger import AuditLogger
     from agent_repl.command_registry import CommandRegistry
     from agent_repl.plugin_registry import PluginRegistry
     from agent_repl.session import Session
@@ -33,6 +34,7 @@ class REPL:
         command_registry: CommandRegistry,
         plugin_registry: PluginRegistry,
         config: Config,
+        audit_logger: AuditLogger | None = None,
     ) -> None:
         self._session = session
         self._tui = tui
@@ -40,6 +42,7 @@ class REPL:
         self._plugin_registry = plugin_registry
         self._config = config
         self._stream_handler = StreamHandler(tui, session)
+        self._audit_logger = audit_logger
 
     async def run(self) -> None:
         """Run the REPL loop until exit."""
@@ -48,6 +51,14 @@ class REPL:
                 raw = await self._tui.prompt_input()
             except (KeyboardInterrupt, EOFError):
                 break
+
+            # Audit log user input
+            stripped = raw.strip()
+            if stripped and self._audit_logger and self._audit_logger.active:
+                if stripped.startswith("/"):
+                    self._audit_logger.log("COMMAND", stripped)
+                else:
+                    self._audit_logger.log("INPUT", stripped)
 
             parsed = parse_input(raw)
             if parsed is None:
@@ -75,6 +86,7 @@ class REPL:
             config=self._config,
             registry=self._command_registry,
             plugin_registry=self._plugin_registry,
+            audit_logger=self._audit_logger,
         )
         try:
             await cmd.handler(ctx)
