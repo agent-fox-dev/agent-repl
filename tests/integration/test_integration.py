@@ -86,7 +86,9 @@ def _make_tui(*inputs: str | BaseException) -> MagicMock:
     tui.append_live_text = MagicMock()
     tui.finalize_live_text = MagicMock()
     tui.set_last_response = MagicMock()
+    tui.show_tool_use = MagicMock()
     tui.show_tool_result = MagicMock()
+    tui.clear_collapsed_results = MagicMock()
     return tui
 
 
