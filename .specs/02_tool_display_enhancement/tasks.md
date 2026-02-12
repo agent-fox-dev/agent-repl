@@ -25,13 +25,13 @@ stored results for 3.
 
 ## Tasks
 
-- [ ] 1. Enhanced Tool Invocation Display
-  - [ ] 1.1 Include tool input in TOOL_USE_START event
+- [x] 1. Enhanced Tool Invocation Display
+  - [x] 1.1 Include tool input in TOOL_USE_START event
     - In `claude_agent.py:_translate_message()`, add `block.input` to the
       `TOOL_USE_START` event data dict (default to `{}` if attr missing)
     - _Requirements: 1.6_
 
-  - [ ] 1.2 Implement `_format_compact_summary()` helper
+  - [x] 1.2 Implement `_format_compact_summary()` helper
     - Add module-level function in `tui.py`
     - Input: `dict[str, Any]` -> Output: `str`
     - Format each key-value pair as `key: value`, separated by two spaces
@@ -41,18 +41,18 @@ stored results for 3.
     - Handle None values as empty string `""`
     - _Requirements: 1.2, 1.3, Edge Cases 1.1, 1.2, 1.3_
 
-  - [ ] 1.3 Add `show_tool_use()` method to `TUIShell`
+  - [x] 1.3 Add `show_tool_use()` method to `TUIShell`
     - Render "Using tool: {name}" in info_color
     - If input is non-empty, render compact summary on next line in dim style
     - _Requirements: 1.1, 1.4, 1.5_
 
-  - [ ] 1.4 Update `stream_handler.py` to use `show_tool_use()`
+  - [x] 1.4 Update `stream_handler.py` to use `show_tool_use()`
     - Change `TOOL_USE_START` handling to extract `input` from event data
     - Call `self._tui.show_tool_use(name, tool_input)` instead of
       `self._tui.show_info(f"Using tool: {name}")`
     - _Requirements: 1.1_
 
-  - [ ] 1.5 Write unit tests for `_format_compact_summary()`
+  - [x] 1.5 Write unit tests for `_format_compact_summary()`
     - Empty dict -> empty string
     - Single key -> "key: value"
     - Multiple keys -> "key1: val1  key2: val2"
@@ -63,32 +63,32 @@ stored results for 3.
     - **Property 3: Value Truncation Bound**
     - **Validates: Requirements 1.2, 1.3**
 
-  - [ ] 1.6 Write unit tests for `show_tool_use()`
+  - [x] 1.6 Write unit tests for `show_tool_use()`
     - Verify tool name line rendered
     - Verify compact summary line rendered for non-empty input
     - Verify no summary line for empty input
     - **Property 9: Empty Input Omission**
     - **Validates: Requirements 1.1, 1.4, 1.5**
 
-  - [ ] 1.V Verify task group 1
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "tool_use or compact_summary"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 1.1-1.6 acceptance criteria met
+  - [x] 1.V Verify task group 1
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "tool_use or compact_summary"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 1.1-1.6 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 1 is complete. Do NOT continue to task group 2 in this session. -->
 
-- [ ] 2. Checkpoint - Tool Invocation Display Complete
+- [x] 2. Checkpoint - Tool Invocation Display Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 3. Dim Tool Output with Collapsible Results
-  - [ ] 3.1 Add `_collapsed_results` state to `TUIShell.__init__()`
+- [x] 3. Dim Tool Output with Collapsible Results
+  - [x] 3.1 Add `_collapsed_results` state to `TUIShell.__init__()`
     - `self._collapsed_results: list[str] = []`
     - _Requirements: 3.6, 3.7_
 
-  - [ ] 3.2 Modify `show_tool_result()` to use dim text instead of Panel
+  - [x] 3.2 Modify `show_tool_result()` to use dim text instead of Panel
     - Remove `Panel` import usage for tool results
     - Render header line: icon + tool name in themed color
     - Render result body in dim style
@@ -99,11 +99,11 @@ stored results for 3.
     - Handle Rich markup in result text (escape or use highlight=False)
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-  - [ ] 3.3 Add `clear_collapsed_results()` method
+  - [x] 3.3 Add `clear_collapsed_results()` method
     - Called when session is cleared (integrate with `/clear` command)
     - _Requirements: 3.7_
 
-  - [ ] 3.4 Write unit tests for dim tool output rendering
+  - [x] 3.4 Write unit tests for dim tool output rendering
     - Short result (<=3 lines) -> full output in dim style, no hint
     - Long result (>3 lines) -> 3 lines + collapse hint
     - Error result (>3 lines) -> full output, no collapse
@@ -115,28 +115,28 @@ stored results for 3.
     - **Property 6: Error Output Completeness**
     - **Validates: Requirements 2.1-2.4, 3.1-3.5**
 
-  - [ ] 3.5 Write unit tests for collapsed result storage
+  - [x] 3.5 Write unit tests for collapsed result storage
     - Verify full text stored on collapse
     - Verify storage grows with each collapse
     - Verify clear resets storage
     - **Property 7: Collapsed Storage Integrity**
     - **Validates: Requirements 3.6, 3.7**
 
-  - [ ] 3.V Verify task group 3
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "tool_result or collapsed"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 2.1-2.4, 3.1-3.7 acceptance criteria met
+  - [x] 3.V Verify task group 3
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "tool_result or collapsed"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 2.1-2.4, 3.1-3.7 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 3 is complete. Do NOT continue to task group 4 in this session. -->
 
-- [ ] 4. Checkpoint - Dim Output and Collapse Complete
+- [x] 4. Checkpoint - Dim Output and Collapse Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 5. Ctrl+O Expand Shortcut
-  - [ ] 5.1 Add `Ctrl+O` key binding in `TUIShell.__init__()`
+- [x] 5. Ctrl+O Expand Shortcut
+  - [x] 5.1 Add `Ctrl+O` key binding in `TUIShell.__init__()`
     - Add `@self._kb.add("c-o")` handler alongside existing `Ctrl+Y` binding
     - If `_collapsed_results` is non-empty, call `show_expanded_result()`
     - If empty, show info message: "No collapsed output to expand."
@@ -144,16 +144,16 @@ stored results for 3.
       `_spinner_active`)
     - _Requirements: 4.1, 4.2, 4.3, 4.5, Edge Cases 4.1, 4.2_
 
-  - [ ] 5.2 Implement `show_expanded_result()` method
+  - [x] 5.2 Implement `show_expanded_result()` method
     - Display the last element of `_collapsed_results` in dim style
     - _Requirements: 4.2, 4.4_
 
-  - [ ] 5.3 Update collapse hint to reference shortcut
+  - [x] 5.3 Update collapse hint to reference shortcut
     - Change hint format to include "(Ctrl+O to expand)"
     - e.g., "▸ 47 more lines (Ctrl+O to expand)"
     - _Requirements: 4.6_
 
-  - [ ] 5.4 Write unit tests for `Ctrl+O` expand behavior
+  - [x] 5.4 Write unit tests for `Ctrl+O` expand behavior
     - No collapsed results -> info message
     - Single collapsed result -> shows full output in dim style
     - Multiple collapsed results -> shows most recent only
@@ -162,46 +162,46 @@ stored results for 3.
     - **Property 8: Expand Index Validity**
     - **Validates: Requirements 4.1-4.6**
 
-  - [ ] 5.V Verify task group 5
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "expand"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 4.1-4.6 acceptance criteria met
+  - [x] 5.V Verify task group 5
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "expand"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 4.1-4.6 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 5 is complete. Do NOT continue to task group 6 in this session. -->
 
-- [ ] 6. Checkpoint - Expand Shortcut Complete
+- [x] 6. Checkpoint - Expand Shortcut Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 7. Integration Tests and Cleanup
-  - [ ] 7.1 Write integration test: full stream with tool input display
+- [x] 7. Integration Tests and Cleanup
+  - [x] 7.1 Write integration test: full stream with tool input display
     - Simulate TOOL_USE_START with input data flowing through stream_handler
     - Verify TUI receives correct name + input
     - **Property 1: Tool Input Inclusion**
     - **Validates: Requirements 1.1, 1.6**
 
-  - [ ] 7.2 Write integration test: stream with collapsible output
+  - [x] 7.2 Write integration test: stream with collapsible output
     - Simulate TOOL_RESULT with >3 lines flowing through stream_handler
     - Verify collapse behavior end-to-end
     - **Validates: Requirements 3.1-3.4**
 
-  - [ ] 7.3 Write property-based tests with Hypothesis
+  - [x] 7.3 Write property-based tests with Hypothesis
     - Arbitrary dicts for compact summary (Property 2, 3)
     - Arbitrary multi-line strings for collapse threshold (Property 5)
     - **Validates: Properties 2, 3, 5**
 
-  - [ ] 7.4 Update existing tests for new rendering
+  - [x] 7.4 Update existing tests for new rendering
     - Fix any tests that assert Panel-based output
     - Ensure stream_handler tests reflect new show_tool_use() call
     - _Requirements: all_
 
-  - [ ] 7.V Verify task group 7
-    - [ ] All new tests pass: `uv run pytest -q tests/`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] All 9 correctness properties validated by tests
+  - [x] 7.V Verify task group 7
+    - [x] All new tests pass: `uv run pytest -q tests/`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] All 9 correctness properties validated by tests
 
 <!-- SESSION BOUNDARY -->
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
@@ -16,6 +17,8 @@ if TYPE_CHECKING:
     from agent_repl.session import Session
     from agent_repl.tui import TUIShell
 
+logger = logging.getLogger(__name__)
+
 
 class StreamHandler:
     """Processes StreamEvent objects and drives TUI rendering."""
@@ -23,6 +26,33 @@ class StreamHandler:
     def __init__(self, tui: TUIShell, session: Session) -> None:
         self._tui = tui
         self._session = session
+
+    async def _collect_input(
+        self,
+        prompt: str,
+        input_type: str,
+        choices: list[str],
+    ) -> str | dict:
+        """Dispatch to the appropriate TUI input method."""
+        if input_type == "approval":
+            if len(choices) != 2:
+                self._tui.show_error(
+                    "Approval request requires exactly 2 choices."
+                )
+                return "reject"
+            return await self._tui.prompt_approval(prompt, choices)
+        elif input_type == "choice":
+            if len(choices) < 2:
+                self._tui.show_error(
+                    "Choice request requires at least 2 choices."
+                )
+                return "reject"
+            return await self._tui.prompt_choice(prompt, choices)
+        elif input_type == "text":
+            return await self._tui.prompt_text_input(prompt)
+        else:
+            self._tui.show_error(f"Unknown input type: {input_type}")
+            return "reject"
 
     async def handle_stream(self, events: AsyncIterator[StreamEvent]) -> ConversationTurn:
         """Process a stream of events, rendering to TUI and building a ConversationTurn."""
@@ -51,7 +81,8 @@ class StreamHandler:
                         self._tui.stop_spinner()
                         first_content = False
                     name = event.data.get("name", "unknown")
-                    self._tui.show_info(f"Using tool: {name}")
+                    tool_input = event.data.get("input", {})
+                    self._tui.show_tool_use(name, tool_input)
 
                 elif event.type == StreamEventType.TOOL_RESULT:
                     name = event.data.get("name", "unknown")
@@ -84,6 +115,42 @@ class StreamHandler:
                         break
                     else:
                         self._tui.show_error(f"Error: {message}")
+
+                elif event.type == StreamEventType.INPUT_REQUEST:
+                    # Pause streaming UI
+                    self._tui.stop_spinner()
+                    if live_started:
+                        self._tui.finalize_live_text()
+                        live_started = False
+
+                    prompt = event.data.get("prompt", "")
+                    input_type = event.data.get("input_type", "approval")
+                    choices = event.data.get("choices", [])
+                    response_future = event.data.get("response_future")
+
+                    if response_future is None:
+                        logger.warning(
+                            "INPUT_REQUEST missing response_future, skipping"
+                        )
+                        continue
+
+                    # Collect user input based on mode
+                    response = await self._collect_input(
+                        prompt, input_type, choices
+                    )
+
+                    # Resolve the future so the agent generator can resume
+                    response_future.set_result(response)
+
+                    # If rejected, cancel the stream
+                    if response == "reject":
+                        self._tui.show_info(
+                            "Rejected. Agent response cancelled."
+                        )
+                        break
+
+                    # Restart spinner for continued agent processing
+                    self._tui.start_spinner()
 
         except (asyncio.CancelledError, KeyboardInterrupt):
             # Stream cancelled — finalize with partial content

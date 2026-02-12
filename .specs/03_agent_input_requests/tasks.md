@@ -26,19 +26,19 @@ each mode, and group 5 validates end-to-end.
 
 ## Tasks
 
-- [ ] 1. Input Request Event Type and Stream Handler Dispatch
-  - [ ] 1.1 Add `INPUT_REQUEST` to `StreamEventType` enum
+- [x] 1. Input Request Event Type and Stream Handler Dispatch
+  - [x] 1.1 Add `INPUT_REQUEST` to `StreamEventType` enum
     - Add `INPUT_REQUEST = "input_request"` to `StreamEventType` in `types.py`
     - _Requirements: 1.1_
 
-  - [ ] 1.2 Add `_collect_input()` method to `StreamHandler`
+  - [x] 1.2 Add `_collect_input()` method to `StreamHandler`
     - Private async method that dispatches to TUI based on `input_type`
     - Accepts `prompt`, `input_type`, `choices` parameters
     - Returns `str | dict` (response value)
     - For unknown `input_type`, show error and return `"reject"`
     - _Requirements: 2.3_
 
-  - [ ] 1.3 Add `INPUT_REQUEST` branch to `handle_stream()`
+  - [x] 1.3 Add `INPUT_REQUEST` branch to `handle_stream()`
     - Stop spinner if active
     - Finalize live text if active (set `live_started = False`)
     - Extract `prompt`, `input_type`, `choices`, `response_future` from event data
@@ -49,7 +49,7 @@ each mode, and group 5 validates end-to-end.
     - Otherwise: restart spinner and continue loop
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 6.1, 6.3_
 
-  - [ ] 1.4 Write unit tests for stream handler INPUT_REQUEST dispatch
+  - [x] 1.4 Write unit tests for stream handler INPUT_REQUEST dispatch
     - Mock TUI methods (not yet implemented, use stubs)
     - Test: INPUT_REQUEST with approval -> future resolved, stream continues
     - Test: INPUT_REQUEST with rejection -> future resolved, stream breaks
@@ -65,21 +65,21 @@ each mode, and group 5 validates end-to-end.
     - **Property 7: History Preservation on Rejection**
     - **Validates: Requirements 2.1-2.5, 6.1-6.5**
 
-  - [ ] 1.V Verify task group 1
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "input_request"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 1.1, 2.1-2.5, 6.1-6.5 acceptance criteria met
+  - [x] 1.V Verify task group 1
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "input_request"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 1.1, 2.1-2.5, 6.1-6.5 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 1 is complete. Do NOT continue to task group 2 in this session. -->
 
-- [ ] 2. Checkpoint - Event Type and Dispatch Complete
+- [x] 2. Checkpoint - Event Type and Dispatch Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 3. Approval Mode TUI Prompt
-  - [ ] 3.1 Implement `prompt_approval()` in `TUIShell`
+- [x] 3. Approval Mode TUI Prompt
+  - [x] 3.1 Implement `prompt_approval()` in `TUIShell`
     - Async method: `async def prompt_approval(self, prompt: str, choices: list[str]) -> str`
     - Render prompt text in default style
     - Render `[a] {choices[0]}` in info_color and `[r] {choices[1]}` in error_color
@@ -91,12 +91,12 @@ each mode, and group 5 validates end-to-end.
     - Return `"approve"` or `"reject"`
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-  - [ ] 3.2 Wire approval mode in `_collect_input()`
+  - [x] 3.2 Wire approval mode in `_collect_input()`
     - Call `self._tui.prompt_approval(prompt, choices)` for `input_type == "approval"`
     - Validate `choices` has exactly 2 items; if not, show error, return `"reject"`
     - _Requirements: 1.4, Edge Case 1.1_
 
-  - [ ] 3.3 Write unit tests for `prompt_approval()`
+  - [x] 3.3 Write unit tests for `prompt_approval()`
     - Input `a` -> returns `"approve"`
     - Input `1` -> returns `"approve"`
     - Input `r` -> returns `"reject"`
@@ -110,21 +110,21 @@ each mode, and group 5 validates end-to-end.
     - **Property 8: Re-prompt on Invalid Input**
     - **Validates: Requirements 3.1-3.6, Edge Cases 3.E1, 3.E2**
 
-  - [ ] 3.V Verify task group 3
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "approval"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 3.1-3.6 acceptance criteria met
+  - [x] 3.V Verify task group 3
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "approval"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 3.1-3.6 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 3 is complete. Do NOT continue to task group 4 in this session. -->
 
-- [ ] 4. Checkpoint - Approval Mode Complete
+- [x] 4. Checkpoint - Approval Mode Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 5. Choice Mode TUI Prompt
-  - [ ] 5.1 Implement `prompt_choice()` in `TUIShell`
+- [x] 5. Choice Mode TUI Prompt
+  - [x] 5.1 Implement `prompt_choice()` in `TUIShell`
     - Async method: `async def prompt_choice(self, prompt: str, choices: list[str]) -> str | dict[str, Any]`
     - Render prompt text in default style
     - Render numbered choices: `  1) Choice A` with number in info_color
@@ -141,12 +141,12 @@ each mode, and group 5 validates end-to-end.
     - Return `{"index": N, "value": "choice text"}` or `"reject"`
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8_
 
-  - [ ] 5.2 Wire choice mode in `_collect_input()`
+  - [x] 5.2 Wire choice mode in `_collect_input()`
     - Call `self._tui.prompt_choice(prompt, choices)` for `input_type == "choice"`
     - Validate `choices` has at least 2 items; if not, show error, return `"reject"`
     - _Requirements: 1.5, Edge Case 1.1_
 
-  - [ ] 5.3 Write unit tests for `prompt_choice()`
+  - [x] 5.3 Write unit tests for `prompt_choice()`
     - Numeric input `1` with 3 choices -> returns `{"index": 0, "value": "..."}`
     - Numeric input `3` with 3 choices -> returns `{"index": 2, "value": "..."}`
     - Input `r` -> returns `"reject"`
@@ -158,7 +158,7 @@ each mode, and group 5 validates end-to-end.
     - **Property 8: Re-prompt on Invalid Input**
     - **Validates: Requirements 4.1-4.8, Edge Cases 4.E1, 4.E2, 4.E3**
 
-  - [ ] 5.4 Write unit tests for arrow key navigation
+  - [x] 5.4 Write unit tests for arrow key navigation
     - Down arrow changes selection index
     - Up arrow changes selection index
     - Arrow wrap-around at boundaries
@@ -166,21 +166,21 @@ each mode, and group 5 validates end-to-end.
     - Number key overrides arrow selection
     - **Validates: Requirements 4.4, 4.8**
 
-  - [ ] 5.V Verify task group 5
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "choice"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 4.1-4.8 acceptance criteria met
+  - [x] 5.V Verify task group 5
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "choice"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 4.1-4.8 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 5 is complete. Do NOT continue to task group 6 in this session. -->
 
-- [ ] 6. Checkpoint - Choice Mode Complete
+- [x] 6. Checkpoint - Choice Mode Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 7. Text Input Mode
-  - [ ] 7.1 Implement `prompt_text_input()` in `TUIShell`
+- [x] 7. Text Input Mode
+  - [x] 7.1 Implement `prompt_text_input()` in `TUIShell`
     - Async method: `async def prompt_text_input(self, prompt: str) -> str`
     - Render prompt text in default style
     - Render hint in dim: `(type r or /reject to abort)`
@@ -192,11 +192,11 @@ each mode, and group 5 validates end-to-end.
     - Return input string or `"reject"`
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
 
-  - [ ] 7.2 Wire text mode in `_collect_input()`
+  - [x] 7.2 Wire text mode in `_collect_input()`
     - Call `self._tui.prompt_text_input(prompt)` for `input_type == "text"`
     - _Requirements: 1.6_
 
-  - [ ] 7.3 Write unit tests for `prompt_text_input()`
+  - [x] 7.3 Write unit tests for `prompt_text_input()`
     - Valid text input -> returns input string
     - Input `r` -> returns `"reject"`
     - Input `/reject` -> returns `"reject"`
@@ -206,27 +206,27 @@ each mode, and group 5 validates end-to-end.
     - **Property 8: Re-prompt on Invalid Input**
     - **Validates: Requirements 5.1-5.6, Edge Cases 5.E1, 5.E2**
 
-  - [ ] 7.V Verify task group 7
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "text_input"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 5.1-5.6 acceptance criteria met
+  - [x] 7.V Verify task group 7
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "text_input"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 5.1-5.6 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 7 is complete. Do NOT continue to task group 8 in this session. -->
 
-- [ ] 8. Checkpoint - Text Input Mode Complete
+- [x] 8. Checkpoint - Text Input Mode Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 9. Integration Tests and End-to-End Validation
-  - [ ] 9.1 Create mock agent that yields INPUT_REQUEST events
+- [x] 9. Integration Tests and End-to-End Validation
+  - [x] 9.1 Create mock agent that yields INPUT_REQUEST events
     - Async generator that yields TEXT_DELTA, then INPUT_REQUEST, then
       more TEXT_DELTA (if approved)
     - Support all three input modes
     - _Requirements: all_
 
-  - [ ] 9.2 Write integration test: approval flow (approve path)
+  - [x] 9.2 Write integration test: approval flow (approve path)
     - Mock agent yields text, then approval request
     - User approves -> agent continues, more text yielded
     - Verify complete conversation turn with all text content
@@ -234,7 +234,7 @@ each mode, and group 5 validates end-to-end.
     - **Property 2: Future Resolution Guarantee**
     - **Validates: Requirements 2.3-2.5, 3.5**
 
-  - [ ] 9.3 Write integration test: approval flow (reject path)
+  - [x] 9.3 Write integration test: approval flow (reject path)
     - Mock agent yields text, then approval request
     - User rejects -> stream cancelled
     - Verify partial conversation turn, history preserved
@@ -242,41 +242,41 @@ each mode, and group 5 validates end-to-end.
     - **Property 7: History Preservation on Rejection**
     - **Validates: Requirements 6.1-6.5**
 
-  - [ ] 9.4 Write integration test: choice flow
+  - [x] 9.4 Write integration test: choice flow
     - Mock agent yields choice request with 3 options
     - User selects option 2
     - Verify agent receives `{"index": 1, "value": "..."}`, continues
     - **Property 4: Choice Index Validity**
     - **Validates: Requirements 4.6**
 
-  - [ ] 9.5 Write integration test: text input flow
+  - [x] 9.5 Write integration test: text input flow
     - Mock agent yields text input request
     - User provides free-text answer
     - Verify agent receives exact text, continues
     - **Validates: Requirements 5.4**
 
-  - [ ] 9.6 Write integration test: multiple input requests
+  - [x] 9.6 Write integration test: multiple input requests
     - Mock agent yields two sequential INPUT_REQUEST events
     - Both handled correctly, stream completes
     - **Validates: Edge Case 2.E2**
 
-  - [ ] 9.7 Write property-based tests
+  - [x] 9.7 Write property-based tests
     - Generate arbitrary choice lists (2-20 items), verify index range in
       response (Property 4)
     - Generate approval requests, verify response is always binary
       (Property 3)
     - **Validates: Properties 3, 4**
 
-  - [ ] 9.8 Update existing stream_handler tests
+  - [x] 9.8 Update existing stream_handler tests
     - Ensure existing tests still pass with new event type in enum
     - Verify unknown event types are silently ignored
     - _Requirements: all_
 
-  - [ ] 9.V Verify task group 9
-    - [ ] All new tests pass: `uv run pytest -q tests/`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] All 8 correctness properties validated by tests
+  - [x] 9.V Verify task group 9
+    - [x] All new tests pass: `uv run pytest -q tests/`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] All 8 correctness properties validated by tests
 
 <!-- SESSION BOUNDARY -->
 

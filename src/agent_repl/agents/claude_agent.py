@@ -179,7 +179,11 @@ class ClaudeAgentPlugin:
                     events.append(
                         StreamEvent(
                             type=StreamEventType.TOOL_USE_START,
-                            data={"name": block.name, "id": block.id},
+                            data={
+                                "name": block.name,
+                                "id": block.id,
+                                "input": getattr(block, "input", {}),
+                            },
                         )
                     )
 
@@ -254,6 +258,7 @@ class ClaudeAgentPlugin:
 async def _handle_clear(ctx: CommandContext) -> None:
     """Clear conversation history."""
     ctx.session.clear()
+    ctx.tui.clear_collapsed_results()
     ctx.tui.show_info("Conversation history cleared.")
 
 

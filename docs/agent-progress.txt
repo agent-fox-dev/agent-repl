@@ -415,3 +415,537 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 17 (Canonical Example + Integration Tests)
+
+---
+
+2026-02-12T12:00:00Z
+Specification: .specs/02_tool_display_enhancement
+Task: 1 (Enhanced Tool Invocation Display)
+Branch: feature/tool-invocation-display
+
+Completed:
+- 1.1 claude_agent.py: Added block.input to TOOL_USE_START event data dict
+  (uses getattr with {} default for safety)
+- 1.2 tui.py: Added _format_compact_summary() module-level function
+  - key: value pairs separated by two spaces
+  - Truncation at 60 chars with "..."
+  - JSON serialization for nested objects
+  - None values displayed as ""
+  - Newlines in string values escaped as \n
+- 1.3 tui.py: Added show_tool_use(name, tool_input) method to TUIShell
+  - Renders "Using tool: {name}" in info_color
+  - Renders compact summary in dim style (if input non-empty)
+- 1.4 stream_handler.py: Updated TOOL_USE_START handling
+  - Extracts input from event data, calls show_tool_use() instead of show_info()
+- 1.5 test_tui.py: 13 unit tests for _format_compact_summary()
+  - Empty dict, single key, multiple keys, long value truncation, None,
+    nested dict, integer, boolean, list values
+  - Property 2 (Compact Summary Completeness), Property 3 (Value Truncation Bound)
+- 1.6 test_tui.py: 4 unit tests for show_tool_use()
+  - Tool name rendered, compact summary rendered, no summary for empty input,
+    multiple input keys
+  - Property 9 (Empty Input Omission)
+- Updated test_stream_handler.py: show_tool_use mock + 2 updated tests
+- 1.V All verification checks passed
+
+Documentation touched:
+- .specs/02_tool_display_enhancement/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 428 passed (was 410, +18 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 2 (Checkpoint) then 3 (Dim Tool Output with Collapsible Results)
+
+---
+
+2026-02-12T12:30:00Z
+Specification: .specs/02_tool_display_enhancement
+Task: 2 (Checkpoint - Tool Invocation Display Complete)
+Branch: feature/checkpoint-tool-invocation
+
+Completed:
+- Checkpoint verification for task group 1 (Enhanced Tool Invocation Display)
+- All 428 tests pass, linter clean
+- All subtasks 1.1–1.V confirmed complete in tasks.md
+- No questions or issues arising from implementation
+
+Documentation touched:
+- .specs/02_tool_display_enhancement/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 428 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 3 (Dim Tool Output with Collapsible Results)
+
+---
+
+2026-02-12T13:00:00Z
+Specification: .specs/02_tool_display_enhancement
+Task: 3 (Dim Tool Output with Collapsible Results)
+Branch: feature/dim-collapsible-output
+
+Completed:
+- 3.1 tui.py: Added _collapsed_results: list[str] = [] to TUIShell.__init__()
+- 3.2 tui.py: Replaced Panel rendering with dim text + collapsible output
+  - Header line: icon (✓/✗) + tool name in themed color
+  - Result body in dim style
+  - Non-error results >3 lines: first 3 lines + "▸ N more lines" hint
+  - Error results: always full output
+  - Empty results: header only
+  - Singular "line" when 1 hidden line
+  - Removed Panel import (no longer used)
+  - _COLLAPSE_THRESHOLD module-level constant
+- 3.3 tui.py: Added clear_collapsed_results() method
+  - claude_agent.py: Integrated with /clear command handler
+- 3.4 test_tui.py: 12 unit tests for dim tool output rendering
+  - Short result, single line, long result collapsed, error never collapsed,
+    empty result, exactly 3 lines, singular hint, no Panel (Property 4),
+    success/error header colors
+  - Property 5 (Collapse Threshold), Property 6 (Error Output Completeness)
+- 3.5 test_tui.py: 7 unit tests for collapsed result storage
+  - Stored on collapse, sequential growth, short not stored, error not stored,
+    clear resets, initially empty
+  - Property 7 (Collapsed Storage Integrity)
+- 3.V All verification checks passed
+
+Documentation touched:
+- .specs/02_tool_display_enhancement/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 447 passed (was 428, +19 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 4 (Checkpoint) then 5 (Ctrl+O Expand Shortcut)
+
+---
+
+2026-02-12T13:30:00Z
+Specification: .specs/02_tool_display_enhancement
+Task: 4 (Checkpoint - Dim Output and Collapse Complete)
+Branch: feature/checkpoint-dim-collapse
+
+Completed:
+- Checkpoint verification for task groups 1-3
+- All 447 tests pass, linter clean
+- Task groups 1 (Enhanced Tool Invocation Display), 2 (Checkpoint),
+  3 (Dim Tool Output with Collapsible Results) all confirmed complete
+- No questions or issues
+
+Documentation touched:
+- .specs/02_tool_display_enhancement/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 447 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 5 (Ctrl+O Expand Shortcut)
+
+---
+
+2026-02-12T14:00:00Z
+Specification: .specs/02_tool_display_enhancement
+Task: 5 (Ctrl+O Expand Shortcut)
+Branch: feature/ctrl-o-expand
+
+Completed:
+- 5.1 tui.py: Added Ctrl+O key binding in TUIShell.__init__()
+  - Guards against activation during live streaming or spinner
+  - Shows "No collapsed output to expand." when list is empty
+  - Calls show_expanded_result() when results exist
+- 5.2 tui.py: Added show_expanded_result() method
+  - Displays last element of _collapsed_results in dim style
+- 5.3 tui.py: Updated collapse hint to include "(Ctrl+O to expand)"
+  - e.g., "▸ 4 more lines (Ctrl+O to expand)"
+- 5.4 test_tui.py: 9 unit tests for Ctrl+O expand behavior
+  - No results shows nothing, single result expand, most recent expand,
+    hint references shortcut, binding registered, no action during live,
+    no action during spinner, empty shows info message
+  - Property 8 (Expand Index Validity)
+- 5.V All verification checks passed
+- Added _find_key_handler() test helper for key binding invocation
+
+Documentation touched:
+- .specs/02_tool_display_enhancement/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 456 passed (was 447, +9 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 6 (Checkpoint) then 7 (Integration Tests and Cleanup)
+
+---
+
+2026-02-12T14:30:00Z
+Specification: .specs/02_tool_display_enhancement
+Task: 6 (Checkpoint - Expand Shortcut Complete)
+Branch: feature/checkpoint-expand-shortcut
+
+Completed:
+- Checkpoint verification for task groups 1-5
+- All 456 tests pass, linter clean
+- Task groups 1-5 all confirmed complete in tasks.md
+- No questions or issues
+
+Documentation touched:
+- .specs/02_tool_display_enhancement/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 456 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 7 (Integration Tests and Cleanup)
+
+---
+
+2026-02-12T15:00:00Z
+Specification: .specs/02_tool_display_enhancement
+Task: 7 (Integration Tests and Cleanup)
+Branch: feature/integration-tests-cleanup
+
+Completed:
+- 7.1 test_stream_handler.py: 4 integration tests for tool input display
+  - Tool input passed to TUI, nested objects, empty dict
+  - Property 1 (Tool Input Inclusion) — property-based test
+- 7.2 test_stream_handler.py: 3 integration tests for collapsible output
+  - Long result collapse e2e, error result e2e, mixed stream e2e
+- 7.3 Property-based tests: All 9 properties already covered from earlier tasks
+  - Property 1 added in 7.1; Properties 2-9 already present
+- 7.4 Existing test updates:
+  - test_claude_agent.py: Added input field assertion to test_tool_use_start
+  - test_integration.py: Added show_tool_use and clear_collapsed_results mocks
+- 7.V All verification checks passed; all 9 correctness properties validated
+
+All 9 Correctness Properties:
+  1. Tool Input Inclusion (test_stream_handler.py)
+  2. Compact Summary Completeness (test_tui.py)
+  3. Value Truncation Bound (test_tui.py)
+  4. No Panel Usage (test_tui.py)
+  5. Collapse Threshold (test_tui.py)
+  6. Error Output Completeness (test_tui.py)
+  7. Collapsed Storage Integrity (test_tui.py)
+  8. Expand Index Validity (test_tui.py)
+  9. Empty Input Omission (test_tui.py)
+
+Documentation touched:
+- .specs/02_tool_display_enhancement/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 463 passed (was 456, +7 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Spec 02 (Tool Display Enhancement) is now COMPLETE.
+All 7 task groups finished. All requirements 1.1-4.6 implemented and tested.
+
+---
+
+2026-02-12T16:00:00Z
+Specification: .specs/03_agent_input_requests
+Task: 1 (Input Request Event Type and Stream Handler Dispatch)
+Branch: feature/input-request-dispatch
+
+Completed:
+- 1.1 types.py: Added INPUT_REQUEST = "input_request" to StreamEventType enum
+- 1.2 stream_handler.py: Added _collect_input() async method
+  - Dispatches to TUI based on input_type: approval, choice, text
+  - Unknown input_type → show_error, return "reject"
+- 1.3 stream_handler.py: Added INPUT_REQUEST branch to handle_stream()
+  - Stops spinner, finalizes live text if active
+  - Extracts prompt, input_type, choices, response_future from event data
+  - Guards missing response_future with logger.warning + continue
+  - Resolves future with user response
+  - Rejection breaks loop with info message
+  - Approval restarts spinner for continued processing
+- 1.4 test_stream_handler.py: 16 unit tests for INPUT_REQUEST dispatch
+  - TestInputRequestApproval: future resolved, stream continues, dispatches correctly
+  - TestInputRequestRejection: stream breaks, partial content preserved (Property 7)
+  - TestInputRequestMissingFuture: warning logged, skipped
+  - TestInputRequestUIState: spinner stopped, live text finalized, spinner restarted
+  - TestInputRequestChoiceMode: dispatches to prompt_choice
+  - TestInputRequestTextMode: dispatches to prompt_text_input
+  - TestInputRequestUnknownType: error shown, treated as reject
+  - TestInputRequestMultiple: two sequential requests handled
+  - TestInputRequestProperties: Property 1 (Stream Pause), Property 2 (Future Resolution),
+    Property 5 (Rejection Cancels Stream), Property 7 (History Preservation)
+- Updated test_types.py: StreamEventType member count 5 → 6
+- 1.V All verification checks passed
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 479 passed (was 463, +16 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 2 (Checkpoint) then 3 (Approval Mode TUI Prompt)
+
+---
+
+2026-02-12T16:30:00Z
+Specification: .specs/03_agent_input_requests
+Task: 2 (Checkpoint - Event Type and Dispatch Complete)
+Branch: feature/checkpoint-input-dispatch
+
+Completed:
+- Checkpoint verification for task group 1 (Input Request Event Type and Stream Handler Dispatch)
+- All 479 tests pass, linter clean
+- Task group 1 subtasks 1.1–1.V confirmed complete in tasks.md
+- No questions or issues arising from implementation
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 479 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 3 (Approval Mode TUI Prompt)
+
+---
+
+2026-02-12T17:00:00Z
+Specification: .specs/03_agent_input_requests
+Task: 3 (Approval Mode TUI Prompt)
+Branch: feature/approval-mode-prompt
+
+Completed:
+- 3.1 tui.py: Implemented prompt_approval() async method
+  - Renders prompt text, choice labels with [a]/[r] in info_color/error_color
+  - Uses dedicated PromptSession with ? glyph in info_color
+  - Accepts a/1 for approve, r/2 for reject (case-insensitive)
+  - Re-prompts on invalid/empty input with hint
+  - Handles KeyboardInterrupt as reject
+  - Returns "approve" or "reject"
+- 3.2 stream_handler.py: Added approval choice count validation
+  - Validates choices has exactly 2 items before calling prompt_approval
+  - Shows error and returns "reject" for wrong count
+- 3.3 test_tui.py: 11 unit tests for prompt_approval()
+  - approve with a, approve with 1, reject with r, reject with 2
+  - case-insensitive (A, R), invalid then valid re-prompts
+  - empty input re-prompts, KeyboardInterrupt rejects
+  - custom choice labels rendered, prompt text rendered
+  - Property 3 (Approval Binary Constraint)
+- 3.3 test_stream_handler.py: 3 unit tests for approval validation
+  - wrong choice count (1 item), empty choices, three choices
+- Fixed _make_input_request_event helper (choices=[] was treated as falsy)
+- 3.V All verification checks passed
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 493 passed (was 479, +14 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 4 (Checkpoint) then 5 (Choice Mode TUI Prompt)
+
+---
+
+2026-02-12T17:30:00Z
+Specification: .specs/03_agent_input_requests
+Task: 4 (Checkpoint - Approval Mode Complete)
+Branch: feature/checkpoint-approval-mode
+
+Completed:
+- Checkpoint verification for task group 3 (Approval Mode TUI Prompt)
+- All 493 tests pass, linter clean
+- Task group 3 subtasks 3.1–3.V confirmed complete in tasks.md
+- No questions or issues arising from implementation
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 493 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 5 (Choice Mode TUI Prompt)
+
+---
+
+2026-02-12T18:00:00Z
+Specification: .specs/03_agent_input_requests
+Task: 5 (Choice Mode TUI Prompt)
+Branch: feature/choice-mode-prompt
+
+Completed:
+- 5.1 tui.py: Implemented prompt_choice() async method
+  - Renders prompt text, numbered choices (1-indexed) with info_color numbers
+  - Renders r) Reject option in error_color
+  - Highlighted choice shown with ▸ prefix and bold style
+  - Dedicated PromptSession with custom KeyBindings for Up/Down arrow navigation
+  - Arrow keys wrap around at boundaries
+  - Enter with empty input confirms currently highlighted choice
+  - Numeric input (1-N) selects directly, 'r' rejects
+  - Re-prompts on invalid/out-of-range input with hint
+  - Handles KeyboardInterrupt as reject
+  - Returns {"index": N, "value": "..."} or "reject"
+  - Helper methods: _render_choice_list(), _move_choice_up(), _move_choice_down()
+  - Choice state: _choice_selected, _choice_count, _choice_list instance vars
+- 5.2 stream_handler.py: Added choice validation (>= 2 choices required)
+- 5.3 test_tui.py: 12 unit tests for prompt_choice()
+  - select first/last, reject, out-of-range reprompt, non-numeric reprompt
+  - single choice, keyboard interrupt, enter confirms default, list rendered
+  - highlight marker, Property 4 (Choice Index Validity)
+- 5.4 test_tui.py: 7 unit tests for arrow key navigation
+  - down increments, up decrements, down wraps, up wraps
+  - enter confirms after navigation, number overrides arrow, render highlight
+- test_stream_handler.py: 2 choice validation tests (too few, empty)
+- 5.V All verification checks passed
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 513 passed (was 493, +20 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 6 (Checkpoint) then 7 (Text Input Mode)
+
+---
+
+2026-02-12T18:30:00Z
+Specification: .specs/03_agent_input_requests
+Task: 6 (Checkpoint - Choice Mode Complete)
+Branch: feature/checkpoint-choice-mode
+
+Completed:
+- Checkpoint verification for task group 5 (Choice Mode TUI Prompt)
+- All 513 tests pass, linter clean
+- Task group 5 subtasks 5.1–5.V confirmed complete in tasks.md
+- No questions or issues arising from implementation
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 513 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 7 (Text Input Mode)
+
+---
+
+2026-02-12T19:00:00Z
+Specification: .specs/03_agent_input_requests
+Task: 7 (Text Input Mode)
+Branch: feature/text-input-mode
+
+Completed:
+- 7.1 tui.py: Implemented prompt_text_input() async method
+  - Renders prompt text in default style
+  - Renders abort hint "(type r or /reject to abort)" in dim style
+  - Uses dedicated PromptSession with ? glyph in info_color
+  - Accepts any non-empty string as valid input
+  - Input "r" or "/reject" returns "reject"
+  - Re-prompts on empty input with "Input required" hint
+  - Handles KeyboardInterrupt as reject
+  - Returns stripped input string or "reject"
+- 7.2 Already wired in _collect_input() from task group 1
+- 7.3 test_tui.py: 8 unit tests for prompt_text_input()
+  - valid text returned, reject with r, reject with /reject
+  - empty input reprompts, keyboard interrupt rejects
+  - multi-word preserved, prompt and hint rendered
+  - Property 8 (Re-prompt on Invalid Input / non-empty text accepted)
+- 7.V All verification checks passed
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 521 passed (was 513, +8 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 8 (Checkpoint) then 9 (Integration Tests and Cleanup)
+
+---
+
+2026-02-12T19:30:00Z
+Specification: .specs/03_agent_input_requests
+Task: 8 (Checkpoint - Text Input Mode Complete)
+Branch: feature/checkpoint-text-input
+
+Completed:
+- Checkpoint verification for task group 7 (Text Input Mode)
+- All 521 tests pass, linter clean
+- Task group 7 subtasks 7.1–7.V confirmed complete in tasks.md
+- No questions or issues arising from implementation
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 521 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 9 (Integration Tests and End-to-End Validation)
+
+---
+
+2026-02-12T20:00:00Z
+Specification: .specs/03_agent_input_requests
+Task: 9 (Integration Tests and End-to-End Validation)
+Branch: feature/input-request-integration-tests
+
+Completed:
+- 9.1 Mock agent async generators with asyncio.Future bidirectional channel
+  - _agent_approval_stream: text → approval request → conditional text
+  - _agent_choice_stream: text → choice request → uses selected value
+  - _agent_text_stream: text → text request → uses provided text
+  - _agent_multi_request_stream: two sequential approval requests
+- 9.2 Integration test: approval approve path
+  - Full flow verified: text + approval + more text, future resolved,
+    complete turn, token usage, spinner paused, session history
+- 9.3 Integration test: approval reject path
+  - Rejection cancels stream, partial content preserved, info message shown
+- 9.4 Integration test: choice flow
+  - User selects option 2, agent receives {"index": 1, "value": "Wrench"},
+    continues with chosen value in response
+- 9.5 Integration test: text input flow
+  - User provides "/home/user/project", agent receives exact text, continues
+- 9.6 Integration test: multiple input requests
+  - Two sequential approvals both handled, full text accumulated
+  - Second request rejected: partial content preserved
+- 9.7 Property-based tests: Property 3 (approval binary e2e),
+  Property 4 (choice index range with 2-20 items)
+- 9.8 Updated integration test mock to include prompt_approval/choice/text_input
+  - Added TestUnknownEventTypeIgnored test for existing compatibility
+- 9.V All verification checks passed
+
+All 8 Correctness Properties:
+  1. Stream Pause Guarantee (test_stream_handler.py)
+  2. Future Resolution Guarantee (test_stream_handler.py)
+  3. Approval Binary Constraint (test_tui.py + test_stream_handler.py)
+  4. Choice Index Validity (test_tui.py + test_stream_handler.py)
+  5. Rejection Cancels Stream (test_stream_handler.py)
+  6. UI State Cleanup Before Prompt (test_stream_handler.py)
+  7. History Preservation on Rejection (test_stream_handler.py)
+  8. Re-prompt on Invalid Input (test_tui.py)
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 530 passed (was 521, +9 new)
+- uv run pytest tests/ -q -k "property" → 42 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Spec 03 (Agent Input Requests) is now COMPLETE.
+All 9 task groups finished. All requirements 1.1-6.5 implemented and tested.

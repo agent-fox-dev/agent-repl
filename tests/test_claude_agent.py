@@ -271,6 +271,7 @@ class TestSendMessage:
         assert events[0].type == StreamEventType.TOOL_USE_START
         assert events[0].data["name"] == "read_file"
         assert events[0].data["id"] == "tu_1"
+        assert events[0].data["input"] == {"path": "x"}
 
     @pytest.mark.asyncio
     async def test_tool_result(self):
