@@ -214,7 +214,7 @@ each mode, and group 5 validates end-to-end.
 
 <!-- SESSION BOUNDARY: Task group 7 is complete. Do NOT continue to task group 8 in this session. -->
 
-- [ ] 8. Checkpoint - Text Input Mode Complete
+- [x] 8. Checkpoint - Text Input Mode Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
