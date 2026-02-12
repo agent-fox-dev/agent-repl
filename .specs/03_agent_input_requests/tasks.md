@@ -174,7 +174,7 @@ each mode, and group 5 validates end-to-end.
 
 <!-- SESSION BOUNDARY: Task group 5 is complete. Do NOT continue to task group 6 in this session. -->
 
-- [ ] 6. Checkpoint - Choice Mode Complete
+- [x] 6. Checkpoint - Choice Mode Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
