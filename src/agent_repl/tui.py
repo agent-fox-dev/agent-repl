@@ -63,6 +63,11 @@ class TUIShell:
         # Collapsed tool results storage
         self._collapsed_results: list[str] = []
 
+        # Choice prompt state (used during prompt_choice)
+        self._choice_selected: int = 0
+        self._choice_count: int = 0
+        self._choice_list: list[str] = []
+
         # Build key bindings
         self._kb = KeyBindings()
 
@@ -263,6 +268,101 @@ class TUIShell:
         if not hints:
             return None
         return " | ".join(hints)
+
+    async def prompt_choice(
+        self, prompt: str, choices: list[str],
+    ) -> str | dict[str, Any]:
+        """Display numbered choice list with arrow navigation.
+
+        Returns ``{"index": N, "value": "..."}`` or ``"reject"``.
+        """
+        self._console.print(Text(prompt))
+
+        n = len(choices)
+        self._choice_selected = 0
+        self._choice_count = n
+        self._choice_list = choices
+
+        self._render_choice_list()
+
+        # Dedicated key bindings for arrow navigation
+        choice_kb = KeyBindings()
+
+        @choice_kb.add("up")
+        def _up(event: Any) -> None:
+            self._move_choice_up()
+            self._render_choice_list()
+
+        @choice_kb.add("down")
+        def _down(event: Any) -> None:
+            self._move_choice_down()
+            self._render_choice_list()
+
+        choice_session: PromptSession[str] = PromptSession(
+            key_bindings=choice_kb,
+        )
+
+        while True:
+            try:
+                answer = await choice_session.prompt_async(
+                    HTML(f"<style fg='{self._theme.info_color}'>? </style>"),
+                )
+            except KeyboardInterrupt:
+                return "reject"
+
+            answer = answer.strip().lower()
+
+            if answer == "r":
+                return "reject"
+            elif answer == "":
+                # Enter with no text confirms highlighted choice
+                idx = self._choice_selected
+                return {"index": idx, "value": choices[idx]}
+
+            try:
+                num = int(answer)
+                if 1 <= num <= n:
+                    return {"index": num - 1, "value": choices[num - 1]}
+                else:
+                    self._console.print(
+                        Text(
+                            f"Invalid. Enter 1-{n} or r to reject.",
+                            style="dim",
+                        )
+                    )
+            except ValueError:
+                self._console.print(
+                    Text(
+                        f"Invalid. Enter 1-{n} or r to reject.",
+                        style="dim",
+                    )
+                )
+
+    def _render_choice_list(self) -> None:
+        """Render the numbered choice list with current highlight."""
+        for i, choice in enumerate(self._choice_list):
+            if i == self._choice_selected:
+                line = Text(f"▸ {i + 1}) {choice}", style="bold")
+            else:
+                line = Text()
+                line.append(f"  {i + 1}) ", style=self._theme.info_color)
+                line.append(choice)
+            self._console.print(line)
+        self._console.print(
+            Text("  r) Reject", style=self._theme.error_color),
+        )
+
+    def _move_choice_up(self) -> None:
+        """Move choice selection up with wrap-around."""
+        self._choice_selected = (
+            (self._choice_selected - 1) % self._choice_count
+        )
+
+    def _move_choice_down(self) -> None:
+        """Move choice selection down with wrap-around."""
+        self._choice_selected = (
+            (self._choice_selected + 1) % self._choice_count
+        )
 
     async def prompt_approval(self, prompt: str, choices: list[str]) -> str:
         """Display binary approval prompt. Returns 'approve' or 'reject'."""

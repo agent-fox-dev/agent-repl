@@ -123,8 +123,8 @@ each mode, and group 5 validates end-to-end.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 5. Choice Mode TUI Prompt
-  - [ ] 5.1 Implement `prompt_choice()` in `TUIShell`
+- [x] 5. Choice Mode TUI Prompt
+  - [x] 5.1 Implement `prompt_choice()` in `TUIShell`
     - Async method: `async def prompt_choice(self, prompt: str, choices: list[str]) -> str | dict[str, Any]`
     - Render prompt text in default style
     - Render numbered choices: `  1) Choice A` with number in info_color
@@ -141,12 +141,12 @@ each mode, and group 5 validates end-to-end.
     - Return `{"index": N, "value": "choice text"}` or `"reject"`
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8_
 
-  - [ ] 5.2 Wire choice mode in `_collect_input()`
+  - [x] 5.2 Wire choice mode in `_collect_input()`
     - Call `self._tui.prompt_choice(prompt, choices)` for `input_type == "choice"`
     - Validate `choices` has at least 2 items; if not, show error, return `"reject"`
     - _Requirements: 1.5, Edge Case 1.1_
 
-  - [ ] 5.3 Write unit tests for `prompt_choice()`
+  - [x] 5.3 Write unit tests for `prompt_choice()`
     - Numeric input `1` with 3 choices -> returns `{"index": 0, "value": "..."}`
     - Numeric input `3` with 3 choices -> returns `{"index": 2, "value": "..."}`
     - Input `r` -> returns `"reject"`
@@ -158,7 +158,7 @@ each mode, and group 5 validates end-to-end.
     - **Property 8: Re-prompt on Invalid Input**
     - **Validates: Requirements 4.1-4.8, Edge Cases 4.E1, 4.E2, 4.E3**
 
-  - [ ] 5.4 Write unit tests for arrow key navigation
+  - [x] 5.4 Write unit tests for arrow key navigation
     - Down arrow changes selection index
     - Up arrow changes selection index
     - Arrow wrap-around at boundaries
@@ -166,11 +166,11 @@ each mode, and group 5 validates end-to-end.
     - Number key overrides arrow selection
     - **Validates: Requirements 4.4, 4.8**
 
-  - [ ] 5.V Verify task group 5
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "choice"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 4.1-4.8 acceptance criteria met
+  - [x] 5.V Verify task group 5
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "choice"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 4.1-4.8 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 5 is complete. Do NOT continue to task group 6 in this session. -->
 

@@ -42,6 +42,11 @@ class StreamHandler:
                 return "reject"
             return await self._tui.prompt_approval(prompt, choices)
         elif input_type == "choice":
+            if len(choices) < 2:
+                self._tui.show_error(
+                    "Choice request requires at least 2 choices."
+                )
+                return "reject"
             return await self._tui.prompt_choice(prompt, choices)
         elif input_type == "text":
             return await self._tui.prompt_text_input(prompt)
