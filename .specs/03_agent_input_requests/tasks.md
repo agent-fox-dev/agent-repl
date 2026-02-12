@@ -179,8 +179,8 @@ each mode, and group 5 validates end-to-end.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 7. Text Input Mode
-  - [ ] 7.1 Implement `prompt_text_input()` in `TUIShell`
+- [x] 7. Text Input Mode
+  - [x] 7.1 Implement `prompt_text_input()` in `TUIShell`
     - Async method: `async def prompt_text_input(self, prompt: str) -> str`
     - Render prompt text in default style
     - Render hint in dim: `(type r or /reject to abort)`
@@ -192,11 +192,11 @@ each mode, and group 5 validates end-to-end.
     - Return input string or `"reject"`
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
 
-  - [ ] 7.2 Wire text mode in `_collect_input()`
+  - [x] 7.2 Wire text mode in `_collect_input()`
     - Call `self._tui.prompt_text_input(prompt)` for `input_type == "text"`
     - _Requirements: 1.6_
 
-  - [ ] 7.3 Write unit tests for `prompt_text_input()`
+  - [x] 7.3 Write unit tests for `prompt_text_input()`
     - Valid text input -> returns input string
     - Input `r` -> returns `"reject"`
     - Input `/reject` -> returns `"reject"`
@@ -206,11 +206,11 @@ each mode, and group 5 validates end-to-end.
     - **Property 8: Re-prompt on Invalid Input**
     - **Validates: Requirements 5.1-5.6, Edge Cases 5.E1, 5.E2**
 
-  - [ ] 7.V Verify task group 7
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "text_input"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 5.1-5.6 acceptance criteria met
+  - [x] 7.V Verify task group 7
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "text_input"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 5.1-5.6 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 7 is complete. Do NOT continue to task group 8 in this session. -->
 

@@ -1247,3 +1247,132 @@ class TestChoiceArrowNavigation:
         highlighted = [x for x in lines if "▸" in x]
         assert len(highlighted) == 1
         assert "B" in highlighted[0]
+
+
+# --- Spec 03: Text Input Mode Tests ---
+
+
+class TestPromptTextInput:
+    """Tests for prompt_text_input().
+
+    Validates: Requirements 5.1-5.6, Edge Cases 5.E1, 5.E2.
+    Property 8: Re-prompt on Invalid Input.
+    """
+
+    @pytest.mark.asyncio
+    async def test_valid_text_returned(self, captured_tui: TUIShell):
+        """Valid text input is returned as-is."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="hello world")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_text_input("Enter name:")
+        assert result == "hello world"
+
+    @pytest.mark.asyncio
+    async def test_reject_with_r(self, captured_tui: TUIShell):
+        """Input 'r' returns 'reject'."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="r")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_text_input("Enter name:")
+        assert result == "reject"
+
+    @pytest.mark.asyncio
+    async def test_reject_with_slash_reject(self, captured_tui: TUIShell):
+        """Input '/reject' returns 'reject'."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="/reject")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_text_input("Enter name:")
+        assert result == "reject"
+
+    @pytest.mark.asyncio
+    async def test_empty_input_reprompts(self, captured_tui: TUIShell):
+        """Empty input re-prompts. Edge Case 5.E1."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(
+                side_effect=["", "  ", "my answer"],
+            )
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_text_input("Enter name:")
+        assert result == "my answer"
+        assert mock_session.prompt_async.call_count == 3
+        output = _get_output(captured_tui)
+        assert output.count("Input required") == 2
+
+    @pytest.mark.asyncio
+    async def test_keyboard_interrupt_rejects(self, captured_tui: TUIShell):
+        """KeyboardInterrupt returns 'reject'. Edge Case 5.E2."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(
+                side_effect=KeyboardInterrupt,
+            )
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_text_input("Enter name:")
+        assert result == "reject"
+
+    @pytest.mark.asyncio
+    async def test_multi_word_preserved(self, captured_tui: TUIShell):
+        """Multi-word input is preserved intact."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(
+                return_value="  this is a long answer  ",
+            )
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_text_input("Details?")
+        assert result == "this is a long answer"
+
+    @pytest.mark.asyncio
+    async def test_prompt_and_hint_rendered(self, captured_tui: TUIShell):
+        """Prompt text and abort hint are displayed."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="ok")
+            mock_cls.return_value = mock_session
+
+            await captured_tui.prompt_text_input(
+                "What is the target directory?",
+            )
+        output = _get_output(captured_tui)
+        assert "What is the target directory?" in output
+        assert "/reject" in output
+
+    @pytest.mark.property
+    @given(
+        text=st.text(
+            min_size=1, max_size=50,
+            alphabet=st.characters(
+                whitelist_categories=("L", "N", "P", "S"),
+            ),
+        ).filter(lambda s: s.strip() not in ("r", "/reject") and s.strip()),
+    )
+    @pytest.mark.asyncio
+    async def test_property8_text_non_empty_accepted(self, text: str):
+        """Property 8: Any non-empty, non-reject string is returned."""
+        config = Config()
+        tui = TUIShell(config)
+        tui._console = Console(
+            file=StringIO(), force_terminal=True, width=80,
+        )
+
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value=text)
+            mock_cls.return_value = mock_session
+
+            result = await tui.prompt_text_input("Input:")
+
+        assert result == text.strip()
+        assert result != "reject"
