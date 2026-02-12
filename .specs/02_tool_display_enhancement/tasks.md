@@ -170,7 +170,7 @@ stored results for 3.
 
 <!-- SESSION BOUNDARY: Task group 5 is complete. Do NOT continue to task group 6 in this session. -->
 
-- [ ] 6. Checkpoint - Expand Shortcut Complete
+- [x] 6. Checkpoint - Expand Shortcut Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
