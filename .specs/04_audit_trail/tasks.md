@@ -151,7 +151,7 @@ it can be wired, and wiring must complete before TUI/REPL integration.
 
 <!-- SESSION BOUNDARY: Task group 3 is complete. Do NOT continue to task group 4 in this session. -->
 
-- [ ] 4. Checkpoint - App Wiring Complete
+- [x] 4. Checkpoint - App Wiring Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
