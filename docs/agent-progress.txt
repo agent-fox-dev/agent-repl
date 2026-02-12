@@ -710,3 +710,42 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 3 (Approval Mode TUI Prompt)
+
+---
+
+2026-02-12T17:00:00Z
+Specification: .specs/03_agent_input_requests
+Task: 3 (Approval Mode TUI Prompt)
+Branch: feature/approval-mode-prompt
+
+Completed:
+- 3.1 tui.py: Implemented prompt_approval() async method
+  - Renders prompt text, choice labels with [a]/[r] in info_color/error_color
+  - Uses dedicated PromptSession with ? glyph in info_color
+  - Accepts a/1 for approve, r/2 for reject (case-insensitive)
+  - Re-prompts on invalid/empty input with hint
+  - Handles KeyboardInterrupt as reject
+  - Returns "approve" or "reject"
+- 3.2 stream_handler.py: Added approval choice count validation
+  - Validates choices has exactly 2 items before calling prompt_approval
+  - Shows error and returns "reject" for wrong count
+- 3.3 test_tui.py: 11 unit tests for prompt_approval()
+  - approve with a, approve with 1, reject with r, reject with 2
+  - case-insensitive (A, R), invalid then valid re-prompts
+  - empty input re-prompts, KeyboardInterrupt rejects
+  - custom choice labels rendered, prompt text rendered
+  - Property 3 (Approval Binary Constraint)
+- 3.3 test_stream_handler.py: 3 unit tests for approval validation
+  - wrong choice count (1 item), empty choices, three choices
+- Fixed _make_input_request_event helper (choices=[] was treated as falsy)
+- 3.V All verification checks passed
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 493 passed (was 479, +14 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 4 (Checkpoint) then 5 (Choice Mode TUI Prompt)

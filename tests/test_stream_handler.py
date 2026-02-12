@@ -664,7 +664,7 @@ def _make_input_request_event(
     data: dict = {
         "prompt": prompt,
         "input_type": input_type,
-        "choices": choices or ["Approve", "Reject"],
+        "choices": choices if choices is not None else ["Approve", "Reject"],
     }
     if response_future is not None:
         data["response_future"] = response_future
@@ -884,6 +884,77 @@ class TestInputRequestUIState:
 
         # start_spinner called at start and again after approval
         assert tui.start_spinner.call_count >= 2
+
+
+class TestApprovalChoiceValidation:
+    """Approval mode requires exactly 2 choices.
+
+    Validates: Requirement 1.4, Edge Case 1.1.
+    """
+
+    @pytest.mark.asyncio
+    async def test_approval_wrong_choice_count_rejects(self):
+        """Approval with != 2 choices shows error and rejects."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(
+                input_type="approval",
+                choices=["Only one"],
+                response_future=future,
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        assert future.result() == "reject"
+        tui.show_error.assert_called_once()
+        assert "exactly 2" in tui.show_error.call_args[0][0]
+        tui.prompt_approval.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_approval_empty_choices_rejects(self):
+        """Approval with empty choices shows error and rejects."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(
+                input_type="approval",
+                choices=[],
+                response_future=future,
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        assert future.result() == "reject"
+        tui.show_error.assert_called_once()
+        tui.prompt_approval.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_approval_three_choices_rejects(self):
+        """Approval with 3 choices shows error and rejects."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(
+                input_type="approval",
+                choices=["A", "B", "C"],
+                response_future=future,
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        assert future.result() == "reject"
+        tui.show_error.assert_called_once()
+        tui.prompt_approval.assert_not_called()
 
 
 class TestInputRequestChoiceMode:

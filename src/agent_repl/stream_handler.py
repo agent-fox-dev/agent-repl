@@ -35,6 +35,11 @@ class StreamHandler:
     ) -> str | dict:
         """Dispatch to the appropriate TUI input method."""
         if input_type == "approval":
+            if len(choices) != 2:
+                self._tui.show_error(
+                    "Approval request requires exactly 2 choices."
+                )
+                return "reject"
             return await self._tui.prompt_approval(prompt, choices)
         elif input_type == "choice":
             return await self._tui.prompt_choice(prompt, choices)

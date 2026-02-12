@@ -1,13 +1,14 @@
 """Tests for tui module.
 
-Covers Requirements 7.1-7.10, 7.E1, 7.E2, and Spec 02 Requirements 1.1-4.6.
+Covers Requirements 7.1-7.10, 7.E1, 7.E2,
+Spec 02 Requirements 1.1-4.6, and Spec 03 Requirements 3.1-3.6.
 """
 
 from __future__ import annotations
 
 from io import StringIO
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from hypothesis import given
@@ -738,3 +739,225 @@ def _find_key_handler(tui: TUIShell, key: str) -> Any:
         if any(getattr(k, "value", str(k)) == key for k in binding.keys):
             return binding.handler
     return None
+
+
+# --- Spec 03: Approval Mode Tests ---
+
+
+class TestPromptApproval:
+    """Tests for prompt_approval().
+
+    Validates: Requirements 3.1-3.6, Edge Cases 3.E1, 3.E2.
+    Property 3: Approval Binary Constraint.
+    Property 8: Re-prompt on Invalid Input.
+    """
+
+    @pytest.mark.asyncio
+    async def test_approve_with_a(self, captured_tui: TUIShell):
+        """Input 'a' returns 'approve'."""
+        with patch(
+            "agent_repl.tui.PromptSession"
+        ) as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="a")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_approval(
+                "Proceed?", ["Yes", "No"],
+            )
+        assert result == "approve"
+
+    @pytest.mark.asyncio
+    async def test_approve_with_1(self, captured_tui: TUIShell):
+        """Input '1' returns 'approve'."""
+        with patch(
+            "agent_repl.tui.PromptSession"
+        ) as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="1")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_approval(
+                "Proceed?", ["Yes", "No"],
+            )
+        assert result == "approve"
+
+    @pytest.mark.asyncio
+    async def test_reject_with_r(self, captured_tui: TUIShell):
+        """Input 'r' returns 'reject'."""
+        with patch(
+            "agent_repl.tui.PromptSession"
+        ) as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="r")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_approval(
+                "Proceed?", ["Yes", "No"],
+            )
+        assert result == "reject"
+
+    @pytest.mark.asyncio
+    async def test_reject_with_2(self, captured_tui: TUIShell):
+        """Input '2' returns 'reject'."""
+        with patch(
+            "agent_repl.tui.PromptSession"
+        ) as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="2")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_approval(
+                "Proceed?", ["Yes", "No"],
+            )
+        assert result == "reject"
+
+    @pytest.mark.asyncio
+    async def test_case_insensitive(self, captured_tui: TUIShell):
+        """Input 'A' and 'R' work (case-insensitive)."""
+        with patch(
+            "agent_repl.tui.PromptSession"
+        ) as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="A")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_approval(
+                "Proceed?", ["Yes", "No"],
+            )
+        assert result == "approve"
+
+        with patch(
+            "agent_repl.tui.PromptSession"
+        ) as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="R")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_approval(
+                "Proceed?", ["Yes", "No"],
+            )
+        assert result == "reject"
+
+    @pytest.mark.asyncio
+    async def test_invalid_then_valid_reprompts(self, captured_tui: TUIShell):
+        """Invalid input re-prompts, then valid input returns correct value.
+
+        Property 8: Re-prompt on Invalid Input.
+        """
+        with patch(
+            "agent_repl.tui.PromptSession"
+        ) as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(
+                side_effect=["x", "bad", "a"],
+            )
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_approval(
+                "Proceed?", ["Yes", "No"],
+            )
+        assert result == "approve"
+        # prompt_async called 3 times: invalid, invalid, valid
+        assert mock_session.prompt_async.call_count == 3
+        # Hint shown for each invalid input
+        output = _get_output(captured_tui)
+        assert output.count("Invalid input") == 2
+
+    @pytest.mark.asyncio
+    async def test_empty_input_reprompts(self, captured_tui: TUIShell):
+        """Empty input re-prompts (no default). Edge Case 3.E2."""
+        with patch(
+            "agent_repl.tui.PromptSession"
+        ) as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(
+                side_effect=["", "  ", "r"],
+            )
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_approval(
+                "Proceed?", ["Yes", "No"],
+            )
+        assert result == "reject"
+        assert mock_session.prompt_async.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_keyboard_interrupt_rejects(self, captured_tui: TUIShell):
+        """KeyboardInterrupt returns 'reject'."""
+        with patch(
+            "agent_repl.tui.PromptSession"
+        ) as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(
+                side_effect=KeyboardInterrupt,
+            )
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_approval(
+                "Proceed?", ["Yes", "No"],
+            )
+        assert result == "reject"
+
+    @pytest.mark.asyncio
+    async def test_custom_choice_labels_rendered(self, captured_tui: TUIShell):
+        """Custom choice labels are rendered in output."""
+        with patch(
+            "agent_repl.tui.PromptSession"
+        ) as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="a")
+            mock_cls.return_value = mock_session
+
+            await captured_tui.prompt_approval(
+                "Delete files?", ["Confirm Delete", "Cancel"],
+            )
+        output = _get_output(captured_tui)
+        assert "Delete files?" in output
+        assert "Confirm Delete" in output
+        assert "Cancel" in output
+        assert "[a]" in output
+        assert "[r]" in output
+
+    @pytest.mark.asyncio
+    async def test_prompt_text_rendered(self, captured_tui: TUIShell):
+        """Prompt text is displayed before choices."""
+        with patch(
+            "agent_repl.tui.PromptSession"
+        ) as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="a")
+            mock_cls.return_value = mock_session
+
+            await captured_tui.prompt_approval(
+                "The agent wants to modify 3 files.",
+                ["Approve", "Reject"],
+            )
+        output = _get_output(captured_tui)
+        assert "The agent wants to modify 3 files." in output
+
+    @pytest.mark.property
+    @given(
+        approve=st.booleans(),
+    )
+    @pytest.mark.asyncio
+    async def test_property3_approval_binary_constraint(self, approve: bool):
+        """Property 3: Approval response is always 'approve' or 'reject'."""
+        config = Config()
+        tui = TUIShell(config)
+        tui._console = Console(
+            file=StringIO(), force_terminal=True, width=80,
+        )
+
+        user_input = "a" if approve else "r"
+        with patch(
+            "agent_repl.tui.PromptSession"
+        ) as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value=user_input)
+            mock_cls.return_value = mock_session
+
+            result = await tui.prompt_approval(
+                "Proceed?", ["Yes", "No"],
+            )
+        assert result in ("approve", "reject")

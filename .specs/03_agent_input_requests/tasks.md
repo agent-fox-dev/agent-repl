@@ -78,8 +78,8 @@ each mode, and group 5 validates end-to-end.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 3. Approval Mode TUI Prompt
-  - [ ] 3.1 Implement `prompt_approval()` in `TUIShell`
+- [x] 3. Approval Mode TUI Prompt
+  - [x] 3.1 Implement `prompt_approval()` in `TUIShell`
     - Async method: `async def prompt_approval(self, prompt: str, choices: list[str]) -> str`
     - Render prompt text in default style
     - Render `[a] {choices[0]}` in info_color and `[r] {choices[1]}` in error_color
@@ -91,12 +91,12 @@ each mode, and group 5 validates end-to-end.
     - Return `"approve"` or `"reject"`
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-  - [ ] 3.2 Wire approval mode in `_collect_input()`
+  - [x] 3.2 Wire approval mode in `_collect_input()`
     - Call `self._tui.prompt_approval(prompt, choices)` for `input_type == "approval"`
     - Validate `choices` has exactly 2 items; if not, show error, return `"reject"`
     - _Requirements: 1.4, Edge Case 1.1_
 
-  - [ ] 3.3 Write unit tests for `prompt_approval()`
+  - [x] 3.3 Write unit tests for `prompt_approval()`
     - Input `a` -> returns `"approve"`
     - Input `1` -> returns `"approve"`
     - Input `r` -> returns `"reject"`
@@ -110,11 +110,11 @@ each mode, and group 5 validates end-to-end.
     - **Property 8: Re-prompt on Invalid Input**
     - **Validates: Requirements 3.1-3.6, Edge Cases 3.E1, 3.E2**
 
-  - [ ] 3.V Verify task group 3
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "approval"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 3.1-3.6 acceptance criteria met
+  - [x] 3.V Verify task group 3
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "approval"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 3.1-3.6 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 3 is complete. Do NOT continue to task group 4 in this session. -->
 
