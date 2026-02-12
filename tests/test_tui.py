@@ -1376,3 +1376,186 @@ class TestPromptTextInput:
 
         assert result == text.strip()
         assert result != "reject"
+
+
+# --- TUI Audit Integration Tests ---
+
+
+def _make_active_audit_logger() -> MagicMock:
+    """Create a mock AuditLogger that reports as active."""
+    logger = MagicMock()
+    logger.active = True
+    logger.log = MagicMock()
+    return logger
+
+
+def _make_inactive_audit_logger() -> MagicMock:
+    """Create a mock AuditLogger that reports as inactive."""
+    logger = MagicMock()
+    logger.active = False
+    logger.log = MagicMock()
+    return logger
+
+
+class TestTUIAuditShowInfo:
+    """Test audit logging in show_info()."""
+
+    def test_logs_info_when_active(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.show_info("hello")
+        audit.log.assert_called_once_with("INFO", "hello")
+
+    def test_no_log_when_inactive(self, captured_tui: TUIShell):
+        audit = _make_inactive_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.show_info("hello")
+        audit.log.assert_not_called()
+
+    def test_no_log_when_no_logger(self, captured_tui: TUIShell):
+        captured_tui.show_info("hello")
+        # Should not raise - no logger set
+
+
+class TestTUIAuditShowError:
+    """Test audit logging in show_error()."""
+
+    def test_logs_error_when_active(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.show_error("bad thing")
+        audit.log.assert_called_once_with("ERROR", "bad thing")
+
+    def test_no_log_when_inactive(self, captured_tui: TUIShell):
+        audit = _make_inactive_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.show_error("bad thing")
+        audit.log.assert_not_called()
+
+
+class TestTUIAuditShowWarning:
+    """Test audit logging in show_warning()."""
+
+    def test_logs_warning_when_active(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.show_warning("careful")
+        audit.log.assert_called_once_with("WARNING", "careful")
+
+    def test_no_log_when_inactive(self, captured_tui: TUIShell):
+        audit = _make_inactive_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.show_warning("careful")
+        audit.log.assert_not_called()
+
+
+class TestTUIAuditShowToolResult:
+    """Test audit logging in show_tool_result()."""
+
+    def test_logs_tool_result_with_name_and_content(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.show_tool_result("bash", "file1.py\nfile2.py", False)
+        audit.log.assert_called_once_with(
+            "TOOL_RESULT", "✓ bash: file1.py\nfile2.py"
+        )
+
+    def test_logs_error_tool_result(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.show_tool_result("bash", "command failed", True)
+        audit.log.assert_called_once_with(
+            "TOOL_RESULT", "✗ bash: command failed"
+        )
+
+    def test_logs_empty_result(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.show_tool_result("bash", "", False)
+        audit.log.assert_called_once_with("TOOL_RESULT", "✓ bash: ")
+
+
+class TestTUIAuditFinalizeLiveText:
+    """Test audit logging in finalize_live_text()."""
+
+    def test_logs_agent_text(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.start_live_text()
+        captured_tui.append_live_text("Hello ")
+        captured_tui.append_live_text("world")
+        captured_tui.finalize_live_text()
+        audit.log.assert_called_once_with("AGENT", "Hello world")
+
+    def test_no_log_for_empty_text(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.start_live_text()
+        captured_tui.finalize_live_text()
+        audit.log.assert_not_called()
+
+    def test_no_log_when_inactive(self, captured_tui: TUIShell):
+        audit = _make_inactive_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.start_live_text()
+        captured_tui.append_live_text("text")
+        captured_tui.finalize_live_text()
+        audit.log.assert_not_called()
+
+
+class TestTUIAuditShowBanner:
+    """Test audit logging in show_banner()."""
+
+    def test_logs_banner_with_agent(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.show_banner("myapp", "1.0.0", "Claude", "opus")
+        audit.log.assert_called_once_with(
+            "SYSTEM", "myapp v1.0.0 | Agent: Claude (opus)"
+        )
+
+    def test_logs_banner_without_agent(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.show_banner("myapp", "1.0.0", None, None)
+        audit.log.assert_called_once_with("SYSTEM", "myapp v1.0.0")
+
+    def test_logs_banner_agent_no_model(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.show_banner("myapp", "1.0.0", "Claude", None)
+        audit.log.assert_called_once_with(
+            "SYSTEM", "myapp v1.0.0 | Agent: Claude"
+        )
+
+
+class TestTUIAuditTransientMethods:
+    """Test that transient methods do NOT trigger audit logging."""
+
+    def test_start_spinner_no_audit(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.start_spinner("Working...")
+        audit.log.assert_not_called()
+        captured_tui.stop_spinner()
+
+    def test_stop_spinner_no_audit(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.start_spinner()
+        audit.log.reset_mock()
+        captured_tui.stop_spinner()
+        audit.log.assert_not_called()
+
+    def test_start_live_text_no_audit(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.start_live_text()
+        audit.log.assert_not_called()
+
+    def test_append_live_text_no_audit(self, captured_tui: TUIShell):
+        audit = _make_active_audit_logger()
+        captured_tui.set_audit_logger(audit)
+        captured_tui.start_live_text()
+        captured_tui.append_live_text("chunk")
+        audit.log.assert_not_called()

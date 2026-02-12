@@ -121,23 +121,39 @@ class TUIShell:
         )
         self._console.print()
 
+        # Audit: log banner info
+        banner_content = f"{app_name} v{version}"
+        if agent_name:
+            banner_content += f" | Agent: {agent_name}"
+            if model:
+                banner_content += f" ({model})"
+        self._audit("SYSTEM", banner_content)
+
     def show_markdown(self, text: str) -> None:
         """Render text as Rich Markdown with a colored left gutter bar."""
         md = Markdown(text)
         gutter = Text("┃ ", style=self._theme.gutter_color)
         self._console.print(gutter, md, sep="")
 
+    def _audit(self, entry_type: str, content: str) -> None:
+        """Log to audit trail if logger is set and active."""
+        if self._audit_logger is not None and self._audit_logger.active:
+            self._audit_logger.log(entry_type, content)
+
     def show_info(self, text: str) -> None:
         """Render an informational message."""
         self._console.print(Text(text, style=self._theme.info_color))
+        self._audit("INFO", text)
 
     def show_error(self, text: str) -> None:
         """Render an error message."""
         self._console.print(Text(text, style=self._theme.error_color))
+        self._audit("ERROR", text)
 
     def show_warning(self, text: str) -> None:
         """Render a warning message."""
         self._console.print(Text(text, style="yellow"))
+        self._audit("WARNING", text)
 
     def show_tool_use(self, name: str, tool_input: dict[str, Any]) -> None:
         """Render tool invocation with name and compact input summary."""
@@ -154,6 +170,7 @@ class TUIShell:
         color = self._theme.error_color if is_error else self._theme.info_color
         icon = "✗" if is_error else "✓"
         self._console.print(Text(f"{icon} {name}", style=color))
+        self._audit("TOOL_RESULT", f"{icon} {name}: {result}")
 
         if not result:
             return
@@ -231,6 +248,7 @@ class TUIShell:
                 gutter = Text("┃", style=self._theme.gutter_color)
                 self._console.print(gutter)
                 self._last_response = full_text
+                self._audit("AGENT", full_text)
 
     def copy_to_clipboard(self, text: str) -> None:
         """Copy text to clipboard, showing success or error message."""
