@@ -12,6 +12,7 @@ class StreamEventType(Enum):
     TOOL_RESULT = "tool_result"
     USAGE = "usage"
     ERROR = "error"
+    INPUT_REQUEST = "input_request"
 
 
 @dataclass(frozen=True)

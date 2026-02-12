@@ -1,13 +1,15 @@
 """Tests for stream_handler module.
 
 Covers Requirements 6.1-6.9, 6.E1, 6.E2, Property 19,
-and Spec 02 integration tests (Requirements 1.1, 1.6, 3.1-3.4).
+Spec 02 integration tests (Requirements 1.1, 1.6, 3.1-3.4),
+and Spec 03 INPUT_REQUEST dispatch (Requirements 1.1, 2.1-2.5, 6.1-6.5).
 """
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from hypothesis import given
@@ -39,6 +41,10 @@ def _make_tui_mock() -> MagicMock:
     tui.show_tool_use = MagicMock()
     tui.show_tool_result = MagicMock()
     tui.set_last_response = MagicMock()
+    # Input request prompt stubs (TUI methods not yet implemented)
+    tui.prompt_approval = AsyncMock(return_value="approve")
+    tui.prompt_choice = AsyncMock(return_value={"index": 0, "value": "opt"})
+    tui.prompt_text_input = AsyncMock(return_value="user text")
     return tui
 
 
@@ -642,3 +648,496 @@ class TestCollapsibleOutputIntegration:
         )
         assert len(turn.tool_uses) == 1
         assert turn.usage.input_tokens == 50
+
+
+# --- Spec 03: INPUT_REQUEST dispatch tests ---
+
+
+def _make_input_request_event(
+    *,
+    prompt: str = "Proceed?",
+    input_type: str = "approval",
+    choices: list[str] | None = None,
+    response_future: asyncio.Future | None = None,
+) -> StreamEvent:
+    """Helper to build an INPUT_REQUEST event."""
+    data: dict = {
+        "prompt": prompt,
+        "input_type": input_type,
+        "choices": choices or ["Approve", "Reject"],
+    }
+    if response_future is not None:
+        data["response_future"] = response_future
+    return StreamEvent(type=StreamEventType.INPUT_REQUEST, data=data)
+
+
+class TestInputRequestApproval:
+    """INPUT_REQUEST with approval → future resolved, stream continues.
+
+    Validates: Requirements 2.1-2.5.
+    Property 1: Stream Pause Guarantee.
+    Property 2: Future Resolution Guarantee.
+    """
+
+    @pytest.mark.asyncio
+    async def test_approval_resolves_future_and_continues(self):
+        """Approved input request resolves future, stream continues."""
+        tui = _make_tui_mock()
+        tui.prompt_approval = AsyncMock(return_value="approve")
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA, data={"text": "Before "},
+            ),
+            _make_input_request_event(response_future=future),
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA, data={"text": "After"},
+            ),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+
+        assert future.done()
+        assert future.result() == "approve"
+        assert turn.content == "Before After"
+
+    @pytest.mark.asyncio
+    async def test_approval_calls_prompt_approval(self):
+        """Approval mode dispatches to tui.prompt_approval."""
+        tui = _make_tui_mock()
+        tui.prompt_approval = AsyncMock(return_value="approve")
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(
+                prompt="Delete files?",
+                input_type="approval",
+                choices=["Yes", "No"],
+                response_future=future,
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        tui.prompt_approval.assert_called_once_with("Delete files?", ["Yes", "No"])
+
+
+class TestInputRequestRejection:
+    """INPUT_REQUEST with rejection → future resolved, stream breaks.
+
+    Validates: Requirements 6.1, 6.3.
+    Property 5: Rejection Cancels Stream.
+    """
+
+    @pytest.mark.asyncio
+    async def test_rejection_breaks_stream(self):
+        """Rejected input request breaks the event loop."""
+        tui = _make_tui_mock()
+        tui.prompt_approval = AsyncMock(return_value="reject")
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(response_future=future),
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA,
+                data={"text": "should not appear"},
+            ),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+
+        assert future.done()
+        assert future.result() == "reject"
+        # Text after rejection is not accumulated
+        assert turn.content == ""
+        tui.show_info.assert_called_once()
+        assert "Rejected" in tui.show_info.call_args[0][0]
+
+    @pytest.mark.asyncio
+    async def test_rejection_preserves_partial_content(self):
+        """Property 7: Partial text before rejection is preserved in history."""
+        tui = _make_tui_mock()
+        tui.prompt_approval = AsyncMock(return_value="reject")
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA,
+                data={"text": "partial content"},
+            ),
+            _make_input_request_event(response_future=future),
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA,
+                data={"text": "should not appear"},
+            ),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+
+        assert turn.content == "partial content"
+        # Turn was added to session history
+        history = session.get_history()
+        assert len(history) == 1
+        assert history[0].content == "partial content"
+
+
+class TestInputRequestMissingFuture:
+    """INPUT_REQUEST without response_future → warning logged, skipped.
+
+    Validates: Error handling for missing future.
+    """
+
+    @pytest.mark.asyncio
+    async def test_missing_future_skipped(self):
+        """Missing response_future logs warning and continues stream."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        events = [
+            StreamEvent(
+                type=StreamEventType.INPUT_REQUEST,
+                data={
+                    "prompt": "No future?",
+                    "input_type": "approval",
+                    "choices": ["Y", "N"],
+                    # No response_future key
+                },
+            ),
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA,
+                data={"text": "stream continues"},
+            ),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+
+        # Stream continued past the missing-future event
+        assert turn.content == "stream continues"
+        # No prompt methods called
+        tui.prompt_approval.assert_not_called()
+
+
+class TestInputRequestUIState:
+    """Spinner/live text stopped before prompt, restarted after.
+
+    Validates: Requirements 2.1, 2.2.
+    Property 6: UI State Cleanup Before Prompt.
+    """
+
+    @pytest.mark.asyncio
+    async def test_spinner_stopped_before_prompt(self):
+        """Spinner is stopped before input prompt is shown."""
+        tui = _make_tui_mock()
+        tui.prompt_approval = AsyncMock(return_value="approve")
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(response_future=future),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        # stop_spinner called before prompt_approval
+        # The initial start_spinner + stop_spinner in INPUT_REQUEST branch
+        assert tui.stop_spinner.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_live_text_finalized_before_prompt(self):
+        """Live text is finalized before input prompt if active."""
+        tui = _make_tui_mock()
+        tui.prompt_approval = AsyncMock(return_value="approve")
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA,
+                data={"text": "streaming..."},
+            ),
+            _make_input_request_event(response_future=future),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        # finalize_live_text called (once by INPUT_REQUEST branch)
+        tui.finalize_live_text.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_spinner_restarted_after_approval(self):
+        """Spinner restarted after non-rejection input."""
+        tui = _make_tui_mock()
+        tui.prompt_approval = AsyncMock(return_value="approve")
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(response_future=future),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        # start_spinner called at start and again after approval
+        assert tui.start_spinner.call_count >= 2
+
+
+class TestInputRequestChoiceMode:
+    """INPUT_REQUEST with choice mode dispatches to prompt_choice.
+
+    Validates: Requirement 2.3 (dispatch by input_type).
+    """
+
+    @pytest.mark.asyncio
+    async def test_choice_mode_dispatches(self):
+        """Choice input_type dispatches to tui.prompt_choice."""
+        tui = _make_tui_mock()
+        tui.prompt_choice = AsyncMock(
+            return_value={"index": 1, "value": "Option B"},
+        )
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(
+                prompt="Pick one",
+                input_type="choice",
+                choices=["Option A", "Option B", "Option C"],
+                response_future=future,
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        tui.prompt_choice.assert_called_once_with(
+            "Pick one", ["Option A", "Option B", "Option C"],
+        )
+        assert future.result() == {"index": 1, "value": "Option B"}
+
+
+class TestInputRequestTextMode:
+    """INPUT_REQUEST with text mode dispatches to prompt_text_input.
+
+    Validates: Requirement 2.3 (dispatch by input_type).
+    """
+
+    @pytest.mark.asyncio
+    async def test_text_mode_dispatches(self):
+        """Text input_type dispatches to tui.prompt_text_input."""
+        tui = _make_tui_mock()
+        tui.prompt_text_input = AsyncMock(return_value="my answer")
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(
+                prompt="Enter name",
+                input_type="text",
+                response_future=future,
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        tui.prompt_text_input.assert_called_once_with("Enter name")
+        assert future.result() == "my answer"
+
+
+class TestInputRequestUnknownType:
+    """Unknown input_type → error shown, treated as reject.
+
+    Validates: Requirement 2.3 (unknown type handling).
+    """
+
+    @pytest.mark.asyncio
+    async def test_unknown_type_rejects(self):
+        """Unknown input_type shows error and rejects."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(
+                input_type="bogus",
+                response_future=future,
+            ),
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA,
+                data={"text": "should not appear"},
+            ),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+
+        assert future.result() == "reject"
+        tui.show_error.assert_called_once()
+        assert "Unknown input type" in tui.show_error.call_args[0][0]
+        # Stream was broken by rejection
+        assert turn.content == ""
+
+
+class TestInputRequestMultiple:
+    """Multiple INPUT_REQUESTs handled sequentially.
+
+    Validates: Edge Case 2.E2.
+    """
+
+    @pytest.mark.asyncio
+    async def test_multiple_input_requests_sequential(self):
+        """Two sequential input requests both handled."""
+        tui = _make_tui_mock()
+        tui.prompt_approval = AsyncMock(return_value="approve")
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future1: asyncio.Future = asyncio.Future()
+        future2: asyncio.Future = asyncio.Future()
+        events = [
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA,
+                data={"text": "Start "},
+            ),
+            _make_input_request_event(
+                prompt="First?", response_future=future1,
+            ),
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA,
+                data={"text": "Middle "},
+            ),
+            _make_input_request_event(
+                prompt="Second?", response_future=future2,
+            ),
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA,
+                data={"text": "End"},
+            ),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+
+        assert future1.done() and future1.result() == "approve"
+        assert future2.done() and future2.result() == "approve"
+        assert turn.content == "Start Middle End"
+        assert tui.prompt_approval.call_count == 2
+
+
+# --- Property-based tests: Spec 03 ---
+
+
+@pytest.mark.property
+class TestInputRequestProperties:
+    """Property-based tests for INPUT_REQUEST handling."""
+
+    @given(
+        input_type=st.sampled_from(["approval", "choice", "text"]),
+    )
+    @pytest.mark.asyncio
+    async def test_property1_stream_pause_guarantee(self, input_type: str):
+        """Property 1: Stream handler stops spinner before prompting."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(
+                input_type=input_type,
+                response_future=future,
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        # Spinner was stopped (at least once: before prompt + finalize)
+        assert tui.stop_spinner.call_count >= 1
+
+    @given(
+        input_type=st.sampled_from(["approval", "choice", "text"]),
+    )
+    @pytest.mark.asyncio
+    async def test_property2_future_resolution_guarantee(
+        self, input_type: str,
+    ):
+        """Property 2: Future is always resolved exactly once."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(
+                input_type=input_type,
+                response_future=future,
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        assert future.done()
+
+    @given(
+        approve=st.booleans(),
+    )
+    @pytest.mark.asyncio
+    async def test_property5_rejection_cancels_stream(self, approve: bool):
+        """Property 5: Rejection breaks the loop; approval continues."""
+        tui = _make_tui_mock()
+        response = "approve" if approve else "reject"
+        tui.prompt_approval = AsyncMock(return_value=response)
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA,
+                data={"text": "before"},
+            ),
+            _make_input_request_event(response_future=future),
+            StreamEvent(
+                type=StreamEventType.TEXT_DELTA,
+                data={"text": " after"},
+            ),
+        ]
+        turn = await handler.handle_stream(_events_from_list(events))
+
+        if approve:
+            assert turn.content == "before after"
+        else:
+            assert turn.content == "before"
+            tui.show_info.assert_called()
+
+    @given(
+        pre_text=st.text(min_size=0, max_size=20),
+    )
+    @pytest.mark.asyncio
+    async def test_property7_history_preservation_on_rejection(
+        self, pre_text: str,
+    ):
+        """Property 7: Partial content preserved in history on rejection."""
+        tui = _make_tui_mock()
+        tui.prompt_approval = AsyncMock(return_value="reject")
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events_list: list[StreamEvent] = []
+        if pre_text:
+            events_list.append(
+                StreamEvent(
+                    type=StreamEventType.TEXT_DELTA,
+                    data={"text": pre_text},
+                ),
+            )
+        events_list.append(
+            _make_input_request_event(response_future=future),
+        )
+
+        turn = await handler.handle_stream(_events_from_list(events_list))
+
+        # Partial content preserved
+        assert turn.content == pre_text
+        history = session.get_history()
+        assert len(history) == 1
+        assert history[0].content == pre_text

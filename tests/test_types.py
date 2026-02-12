@@ -37,7 +37,7 @@ class TestStreamEventType:
         assert StreamEventType.ERROR.value == "error"
 
     def test_all_members(self):
-        assert len(StreamEventType) == 5
+        assert len(StreamEventType) == 6
 
     def test_from_value(self):
         assert StreamEventType("text_delta") is StreamEventType.TEXT_DELTA
