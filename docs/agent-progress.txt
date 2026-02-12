@@ -644,3 +644,46 @@ Verification:
 
 Spec 02 (Tool Display Enhancement) is now COMPLETE.
 All 7 task groups finished. All requirements 1.1-4.6 implemented and tested.
+
+---
+
+2026-02-12T16:00:00Z
+Specification: .specs/03_agent_input_requests
+Task: 1 (Input Request Event Type and Stream Handler Dispatch)
+Branch: feature/input-request-dispatch
+
+Completed:
+- 1.1 types.py: Added INPUT_REQUEST = "input_request" to StreamEventType enum
+- 1.2 stream_handler.py: Added _collect_input() async method
+  - Dispatches to TUI based on input_type: approval, choice, text
+  - Unknown input_type → show_error, return "reject"
+- 1.3 stream_handler.py: Added INPUT_REQUEST branch to handle_stream()
+  - Stops spinner, finalizes live text if active
+  - Extracts prompt, input_type, choices, response_future from event data
+  - Guards missing response_future with logger.warning + continue
+  - Resolves future with user response
+  - Rejection breaks loop with info message
+  - Approval restarts spinner for continued processing
+- 1.4 test_stream_handler.py: 16 unit tests for INPUT_REQUEST dispatch
+  - TestInputRequestApproval: future resolved, stream continues, dispatches correctly
+  - TestInputRequestRejection: stream breaks, partial content preserved (Property 7)
+  - TestInputRequestMissingFuture: warning logged, skipped
+  - TestInputRequestUIState: spinner stopped, live text finalized, spinner restarted
+  - TestInputRequestChoiceMode: dispatches to prompt_choice
+  - TestInputRequestTextMode: dispatches to prompt_text_input
+  - TestInputRequestUnknownType: error shown, treated as reject
+  - TestInputRequestMultiple: two sequential requests handled
+  - TestInputRequestProperties: Property 1 (Stream Pause), Property 2 (Future Resolution),
+    Property 5 (Rejection Cancels Stream), Property 7 (History Preservation)
+- Updated test_types.py: StreamEventType member count 5 → 6
+- 1.V All verification checks passed
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 479 passed (was 463, +16 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 2 (Checkpoint) then 3 (Approval Mode TUI Prompt)

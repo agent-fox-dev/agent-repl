@@ -26,19 +26,19 @@ each mode, and group 5 validates end-to-end.
 
 ## Tasks
 
-- [ ] 1. Input Request Event Type and Stream Handler Dispatch
-  - [ ] 1.1 Add `INPUT_REQUEST` to `StreamEventType` enum
+- [x] 1. Input Request Event Type and Stream Handler Dispatch
+  - [x] 1.1 Add `INPUT_REQUEST` to `StreamEventType` enum
     - Add `INPUT_REQUEST = "input_request"` to `StreamEventType` in `types.py`
     - _Requirements: 1.1_
 
-  - [ ] 1.2 Add `_collect_input()` method to `StreamHandler`
+  - [x] 1.2 Add `_collect_input()` method to `StreamHandler`
     - Private async method that dispatches to TUI based on `input_type`
     - Accepts `prompt`, `input_type`, `choices` parameters
     - Returns `str | dict` (response value)
     - For unknown `input_type`, show error and return `"reject"`
     - _Requirements: 2.3_
 
-  - [ ] 1.3 Add `INPUT_REQUEST` branch to `handle_stream()`
+  - [x] 1.3 Add `INPUT_REQUEST` branch to `handle_stream()`
     - Stop spinner if active
     - Finalize live text if active (set `live_started = False`)
     - Extract `prompt`, `input_type`, `choices`, `response_future` from event data
@@ -49,7 +49,7 @@ each mode, and group 5 validates end-to-end.
     - Otherwise: restart spinner and continue loop
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 6.1, 6.3_
 
-  - [ ] 1.4 Write unit tests for stream handler INPUT_REQUEST dispatch
+  - [x] 1.4 Write unit tests for stream handler INPUT_REQUEST dispatch
     - Mock TUI methods (not yet implemented, use stubs)
     - Test: INPUT_REQUEST with approval -> future resolved, stream continues
     - Test: INPUT_REQUEST with rejection -> future resolved, stream breaks
@@ -65,11 +65,11 @@ each mode, and group 5 validates end-to-end.
     - **Property 7: History Preservation on Rejection**
     - **Validates: Requirements 2.1-2.5, 6.1-6.5**
 
-  - [ ] 1.V Verify task group 1
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "input_request"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 1.1, 2.1-2.5, 6.1-6.5 acceptance criteria met
+  - [x] 1.V Verify task group 1
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "input_request"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 1.1, 2.1-2.5, 6.1-6.5 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 1 is complete. Do NOT continue to task group 2 in this session. -->
 
