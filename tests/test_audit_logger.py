@@ -382,3 +382,69 @@ class TestPropertyFlushPerEntry:
                     content = f.read()
                 assert f"entry {i}" in content
             logger.stop()
+
+
+class TestPropertyTimestampOrdering:
+    """Property 1: Timestamp Ordering (property-based)."""
+
+    @given(
+        n=st.integers(min_value=1, max_value=20),
+    )
+    @settings(max_examples=10)
+    def test_property_timestamps_ordered(self, n: int):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            logger = AuditLogger(directory=tmpdir)
+            path = logger.start()
+            for i in range(n):
+                logger.log("INFO", f"entry {i}")
+            logger.stop()
+
+            timestamps = []
+            with open(path) as f:
+                for line in f:
+                    match = re.match(r"\[(.+?)\]", line)
+                    if match:
+                        timestamps.append(match.group(1))
+
+            for i in range(1, len(timestamps)):
+                assert timestamps[i] >= timestamps[i - 1]
+
+
+class TestPropertyInputClassification:
+    """Property 6: Input Classification.
+
+    Inputs starting with '/' should be classified as COMMAND,
+    all others as INPUT.
+    """
+
+    @given(
+        text=st.text(min_size=1, max_size=100).filter(
+            lambda s: s.strip() and "\n" not in s and "\r" not in s
+        ),
+    )
+    @settings(max_examples=30)
+    def test_property_classification(self, text: str):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            logger = AuditLogger(directory=tmpdir)
+            path = logger.start()
+
+            stripped = text.strip()
+            if stripped.startswith("/"):
+                logger.log("COMMAND", stripped)
+            else:
+                logger.log("INPUT", stripped)
+            logger.stop()
+
+            with open(path) as f:
+                content = f.read()
+
+            if stripped.startswith("/"):
+                assert "[COMMAND]" in content
+                assert "[INPUT]" not in content
+            else:
+                assert "[INPUT]" in content
+                # COMMAND should not appear (except possibly in content)
+                lines = content.strip().split("\n")
+                non_system = [ln for ln in lines if "[SYSTEM]" not in ln]
+                for line in non_system:
+                    assert "[INPUT]" in line

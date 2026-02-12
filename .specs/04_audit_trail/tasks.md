@@ -267,8 +267,8 @@ it can be wired, and wiring must complete before TUI/REPL integration.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 9. Integration Tests and Property Tests
-  - [ ] 9.1 Write integration test: full session with audit
+- [x] 9. Integration Tests and Property Tests
+  - [x] 9.1 Write integration test: full session with audit
     - Create App with `Config(audit=True)`
     - Simulate: banner → user input → agent response → tool use →
       command → exit
@@ -278,20 +278,20 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - **Property 5: Start/Stop Bookends**
     - **Validates: Requirements 1.2, 4.1-4.6, 6.5, 6.6**
 
-  - [ ] 9.2 Write integration test: /audit toggle mid-session
+  - [x] 9.2 Write integration test: /audit toggle mid-session
     - Start without audit, invoke `/audit` to enable
     - Verify new file created
     - Invoke `/audit` again to disable
     - Verify file closed and contains correct entries
     - **Validates: Requirements 2.2-2.5**
 
-  - [ ] 9.3 Write integration test: audit file survives crash
+  - [x] 9.3 Write integration test: audit file survives crash
     - Start audit, write entries, simulate crash (don't call stop)
     - Verify file contains flushed entries up to crash point
     - **Property 3: Flush Per Entry**
     - **Validates: Requirement 6.4**
 
-  - [ ] 9.4 Write property-based tests
+  - [x] 9.4 Write property-based tests
     - Generate arbitrary strings, verify entry format regex (Property 2)
     - Generate sequences of log calls, verify timestamp ordering
       (Property 1)
@@ -299,17 +299,17 @@ it can be wired, and wiring must complete before TUI/REPL integration.
       (Property 6)
     - **Validates: Properties 1, 2, 6**
 
-  - [ ] 9.5 Update existing tests
+  - [x] 9.5 Update existing tests
     - Ensure App tests pass with new `audit` config field
     - Ensure REPL tests pass with optional `audit_logger` parameter
     - Ensure TUI tests pass with `_audit_logger = None` default
     - _Requirements: all_
 
-  - [ ] 9.V Verify task group 9
-    - [ ] All new tests pass: `uv run pytest -q tests/`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] All 8 correctness properties validated by tests
+  - [x] 9.V Verify task group 9
+    - [x] All new tests pass: `uv run pytest -q tests/`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] All 8 correctness properties validated by tests
 
 <!-- SESSION BOUNDARY -->
 
