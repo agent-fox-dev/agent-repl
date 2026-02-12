@@ -262,7 +262,7 @@ it can be wired, and wiring must complete before TUI/REPL integration.
 
 <!-- SESSION BOUNDARY: Task group 7 is complete. Do NOT continue to task group 8 in this session. -->
 
-- [ ] 8. Checkpoint - REPL and Command Complete
+- [x] 8. Checkpoint - REPL and Command Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
