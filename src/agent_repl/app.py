@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from agent_repl.audit_logger import AuditLogger
 from agent_repl.builtin_commands import BuiltinCommandsPlugin
 from agent_repl.command_registry import CommandRegistry
 from agent_repl.completer import SlashCommandCompleter
@@ -28,6 +29,7 @@ class App:
         self._command_registry = CommandRegistry()
         self._plugin_registry = PluginRegistry()
         self._spawner: SessionSpawner | None = None
+        self._audit_logger = AuditLogger()
 
     async def _setup(self) -> None:
         """Load plugins, create agent, set up completer and toolbar."""
@@ -83,6 +85,15 @@ class App:
         if self._config.agent_factory is not None:
             self._spawner = SessionSpawner(self._config.agent_factory)
 
+        # 8. Wire audit logger to TUI and start if configured
+        self._tui.set_audit_logger(self._audit_logger)
+        if self._config.audit:
+            try:
+                path = self._audit_logger.start()
+                self._tui.show_info(f"Audit started: {path}")
+            except OSError as e:
+                logger.warning("Failed to start auditing: %s", e)
+
     async def run(self) -> None:
         """Run the application: setup, banner, REPL."""
         await self._setup()
@@ -104,8 +115,12 @@ class App:
             command_registry=self._command_registry,
             plugin_registry=self._plugin_registry,
             config=self._config,
+            audit_logger=self._audit_logger,
         )
         await repl.run()
+
+        if self._audit_logger.active:
+            self._audit_logger.stop()
 
     async def run_cli_command(self, command_name: str, args: list[str]) -> int:
         """Invoke a CLI-exposed slash command and return exit code.
@@ -141,6 +156,7 @@ class App:
             config=self._config,
             registry=self._command_registry,
             plugin_registry=self._plugin_registry,
+            audit_logger=self._audit_logger,
         )
         try:
             await cmd.handler(ctx)

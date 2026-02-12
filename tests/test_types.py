@@ -232,6 +232,7 @@ class TestConfig:
         assert c.max_pinned_display == 6
         assert c.max_file_size == 512_000
         assert c.cli_commands == []
+        assert c.audit is False
 
     def test_custom(self):
         c = Config(app_name="myapp", app_version="2.0.0", max_file_size=1_000_000)
@@ -298,6 +299,7 @@ class TestCommandContext:
         assert isinstance(cc.config, Config)
         assert cc.registry is None
         assert cc.plugin_registry is None
+        assert cc.audit_logger is None
 
     def test_with_argv(self):
         cc = CommandContext(args="foo bar", argv=["foo", "bar"])

@@ -51,6 +51,7 @@ class TUIShell:
         self._completer: Any = None
         self._toolbar_provider: Callable[[], list[str]] | None = None
         self._last_response: str | None = None
+        self._audit_logger: Any = None
 
         # Live text state
         self._live_text_parts: list[str] = []
@@ -251,6 +252,10 @@ class TUIShell:
             completer=self._completer,
             bottom_toolbar=toolbar,
         )
+
+    def set_audit_logger(self, audit_logger: Any) -> None:
+        """Set the audit logger for recording output."""
+        self._audit_logger = audit_logger
 
     def set_completer(self, completer: Any) -> None:
         """Set the prompt_toolkit completer for slash commands."""

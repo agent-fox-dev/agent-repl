@@ -315,3 +315,116 @@ class TestPublicAPI:
         assert "StreamEvent" in agent_repl.__all__
         assert "StreamEventType" in agent_repl.__all__
         assert "Theme" in agent_repl.__all__
+
+
+class TestAuditWiring:
+    """Test AuditLogger wiring in App."""
+
+    def test_audit_logger_created_on_init(self):
+        app = App()
+        assert app._audit_logger is not None
+        assert app._audit_logger.active is False
+
+    @pytest.mark.asyncio
+    async def test_setup_starts_auditing_when_config_audit_true(self):
+        config = Config(audit=True)
+        app = App(config=config)
+        with patch("agent_repl.app.load_config") as mock_lc:
+            mock_lc.return_value = MagicMock(plugin_paths=[])
+            await app._setup()
+        assert app._audit_logger.active is True
+        assert app._audit_logger.file_path is not None
+        # Clean up
+        app._audit_logger.stop()
+
+    @pytest.mark.asyncio
+    async def test_setup_does_not_start_auditing_when_config_audit_false(self):
+        config = Config(audit=False)
+        app = App(config=config)
+        with patch("agent_repl.app.load_config") as mock_lc:
+            mock_lc.return_value = MagicMock(plugin_paths=[])
+            await app._setup()
+        assert app._audit_logger.active is False
+
+    @pytest.mark.asyncio
+    async def test_setup_handles_start_failure_gracefully(self):
+        config = Config(audit=True)
+        app = App(config=config)
+        with (
+            patch("agent_repl.app.load_config") as mock_lc,
+            patch.object(
+                app._audit_logger, "start", side_effect=OSError("permission denied")
+            ),
+        ):
+            mock_lc.return_value = MagicMock(plugin_paths=[])
+            # Should not raise
+            await app._setup()
+        assert app._audit_logger.active is False
+
+    @pytest.mark.asyncio
+    async def test_setup_wires_audit_logger_to_tui(self):
+        app = App()
+        with patch("agent_repl.app.load_config") as mock_lc:
+            mock_lc.return_value = MagicMock(plugin_paths=[])
+            await app._setup()
+        assert app._tui._audit_logger is app._audit_logger
+
+    @pytest.mark.asyncio
+    async def test_run_stops_auditing_on_exit(self):
+        config = Config(audit=True)
+        app = App(config=config)
+
+        with (
+            patch("agent_repl.app.load_config") as mock_lc,
+            patch("agent_repl.app.REPL") as mock_repl_cls,
+        ):
+            mock_lc.return_value = MagicMock(plugin_paths=[])
+            mock_repl_instance = MagicMock()
+            mock_repl_instance.run = AsyncMock()
+            mock_repl_cls.return_value = mock_repl_instance
+
+            app._tui = MagicMock()
+            app._tui.show_banner = MagicMock()
+            app._tui._audit_logger = None
+
+            await app.run()
+
+        assert app._audit_logger.active is False
+        # Clean up any leftover file
+        if app._audit_logger.file_path:
+            import os
+            try:
+                os.unlink(app._audit_logger.file_path)
+            except OSError:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_run_passes_audit_logger_to_repl(self):
+        app = App()
+
+        with (
+            patch("agent_repl.app.load_config") as mock_lc,
+            patch("agent_repl.app.REPL") as mock_repl_cls,
+        ):
+            mock_lc.return_value = MagicMock(plugin_paths=[])
+            mock_repl_instance = MagicMock()
+            mock_repl_instance.run = AsyncMock()
+            mock_repl_cls.return_value = mock_repl_instance
+
+            app._tui = MagicMock()
+            app._tui.show_banner = MagicMock()
+            app._tui._audit_logger = None
+
+            await app.run()
+
+        # Verify REPL was constructed with audit_logger
+        call_kwargs = mock_repl_cls.call_args
+        assert call_kwargs.kwargs.get("audit_logger") is app._audit_logger
+
+    @pytest.mark.asyncio
+    async def test_cli_command_passes_audit_logger_in_context(self):
+        app = App()
+        with patch("agent_repl.app.load_config") as mock_lc:
+            mock_lc.return_value = MagicMock(plugin_paths=[])
+            result = await app.run_cli_command("version", [])
+        assert result == 0
