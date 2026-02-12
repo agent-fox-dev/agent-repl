@@ -837,3 +837,38 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 7 (Text Input Mode)
+
+---
+
+2026-02-12T19:00:00Z
+Specification: .specs/03_agent_input_requests
+Task: 7 (Text Input Mode)
+Branch: feature/text-input-mode
+
+Completed:
+- 7.1 tui.py: Implemented prompt_text_input() async method
+  - Renders prompt text in default style
+  - Renders abort hint "(type r or /reject to abort)" in dim style
+  - Uses dedicated PromptSession with ? glyph in info_color
+  - Accepts any non-empty string as valid input
+  - Input "r" or "/reject" returns "reject"
+  - Re-prompts on empty input with "Input required" hint
+  - Handles KeyboardInterrupt as reject
+  - Returns stripped input string or "reject"
+- 7.2 Already wired in _collect_input() from task group 1
+- 7.3 test_tui.py: 8 unit tests for prompt_text_input()
+  - valid text returned, reject with r, reject with /reject
+  - empty input reprompts, keyboard interrupt rejects
+  - multi-word preserved, prompt and hint rendered
+  - Property 8 (Re-prompt on Invalid Input / non-empty text accepted)
+- 7.V All verification checks passed
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 521 passed (was 513, +8 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 8 (Checkpoint) then 9 (Integration Tests and Cleanup)

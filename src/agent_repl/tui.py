@@ -402,6 +402,38 @@ class TUIShell:
                     )
                 )
 
+    async def prompt_text_input(self, prompt: str) -> str:
+        """Display text input prompt. Returns input string or 'reject'."""
+        # Render prompt text
+        self._console.print(Text(prompt))
+
+        # Render abort hint
+        self._console.print(
+            Text("(type r or /reject to abort)", style="dim"),
+        )
+
+        # Dedicated prompt session for text input
+        text_session: PromptSession[str] = PromptSession()
+
+        while True:
+            try:
+                answer = await text_session.prompt_async(
+                    HTML(f"<style fg='{self._theme.info_color}'>? </style>"),
+                )
+            except KeyboardInterrupt:
+                return "reject"
+
+            if not answer.strip():
+                self._console.print(
+                    Text("Input required. Please enter a response.", style="dim"),
+                )
+                continue
+
+            if answer.strip() in ("r", "/reject"):
+                return "reject"
+
+            return answer.strip()
+
     @property
     def console(self) -> Console:
         """Expose console for testing."""
