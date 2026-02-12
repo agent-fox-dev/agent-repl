@@ -957,6 +957,56 @@ class TestApprovalChoiceValidation:
         tui.prompt_approval.assert_not_called()
 
 
+class TestChoiceValidation:
+    """Choice mode requires at least 2 choices.
+
+    Validates: Requirement 1.5, Edge Case 1.1.
+    """
+
+    @pytest.mark.asyncio
+    async def test_choice_too_few_choices_rejects(self):
+        """Choice with < 2 choices shows error and rejects."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(
+                input_type="choice",
+                choices=["Only one"],
+                response_future=future,
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        assert future.result() == "reject"
+        tui.show_error.assert_called_once()
+        assert "at least 2" in tui.show_error.call_args[0][0]
+        tui.prompt_choice.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_choice_empty_choices_rejects(self):
+        """Choice with empty choices shows error and rejects."""
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        future: asyncio.Future = asyncio.Future()
+        events = [
+            _make_input_request_event(
+                input_type="choice",
+                choices=[],
+                response_future=future,
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+
+        assert future.result() == "reject"
+        tui.show_error.assert_called_once()
+        tui.prompt_choice.assert_not_called()
+
+
 class TestInputRequestChoiceMode:
     """INPUT_REQUEST with choice mode dispatches to prompt_choice.
 

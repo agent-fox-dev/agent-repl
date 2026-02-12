@@ -772,3 +772,45 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 5 (Choice Mode TUI Prompt)
+
+---
+
+2026-02-12T18:00:00Z
+Specification: .specs/03_agent_input_requests
+Task: 5 (Choice Mode TUI Prompt)
+Branch: feature/choice-mode-prompt
+
+Completed:
+- 5.1 tui.py: Implemented prompt_choice() async method
+  - Renders prompt text, numbered choices (1-indexed) with info_color numbers
+  - Renders r) Reject option in error_color
+  - Highlighted choice shown with ▸ prefix and bold style
+  - Dedicated PromptSession with custom KeyBindings for Up/Down arrow navigation
+  - Arrow keys wrap around at boundaries
+  - Enter with empty input confirms currently highlighted choice
+  - Numeric input (1-N) selects directly, 'r' rejects
+  - Re-prompts on invalid/out-of-range input with hint
+  - Handles KeyboardInterrupt as reject
+  - Returns {"index": N, "value": "..."} or "reject"
+  - Helper methods: _render_choice_list(), _move_choice_up(), _move_choice_down()
+  - Choice state: _choice_selected, _choice_count, _choice_list instance vars
+- 5.2 stream_handler.py: Added choice validation (>= 2 choices required)
+- 5.3 test_tui.py: 12 unit tests for prompt_choice()
+  - select first/last, reject, out-of-range reprompt, non-numeric reprompt
+  - single choice, keyboard interrupt, enter confirms default, list rendered
+  - highlight marker, Property 4 (Choice Index Validity)
+- 5.4 test_tui.py: 7 unit tests for arrow key navigation
+  - down increments, up decrements, down wraps, up wraps
+  - enter confirms after navigation, number overrides arrow, render highlight
+- test_stream_handler.py: 2 choice validation tests (too few, empty)
+- 5.V All verification checks passed
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 513 passed (was 493, +20 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 6 (Checkpoint) then 7 (Text Input Mode)

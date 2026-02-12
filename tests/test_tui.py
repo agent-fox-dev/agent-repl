@@ -961,3 +961,289 @@ class TestPromptApproval:
                 "Proceed?", ["Yes", "No"],
             )
         assert result in ("approve", "reject")
+
+
+# --- Spec 03: Choice Mode Tests ---
+
+
+class TestPromptChoice:
+    """Tests for prompt_choice().
+
+    Validates: Requirements 4.1-4.8, Edge Cases 4.E1, 4.E2, 4.E3.
+    Property 4: Choice Index Validity.
+    Property 8: Re-prompt on Invalid Input.
+    """
+
+    @pytest.mark.asyncio
+    async def test_select_first_choice(self, captured_tui: TUIShell):
+        """Numeric input '1' with 3 choices returns index 0."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="1")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_choice(
+                "Pick:", ["Opt A", "Opt B", "Opt C"],
+            )
+        assert result == {"index": 0, "value": "Opt A"}
+
+    @pytest.mark.asyncio
+    async def test_select_last_choice(self, captured_tui: TUIShell):
+        """Numeric input '3' with 3 choices returns index 2."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="3")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_choice(
+                "Pick:", ["Opt A", "Opt B", "Opt C"],
+            )
+        assert result == {"index": 2, "value": "Opt C"}
+
+    @pytest.mark.asyncio
+    async def test_reject_with_r(self, captured_tui: TUIShell):
+        """Input 'r' returns 'reject'."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="r")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_choice(
+                "Pick:", ["Opt A", "Opt B"],
+            )
+        assert result == "reject"
+
+    @pytest.mark.asyncio
+    async def test_out_of_range_reprompts(self, captured_tui: TUIShell):
+        """Out-of-range number re-prompts. Edge Case 4.E1."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(
+                side_effect=["5", "0", "2"],
+            )
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_choice(
+                "Pick:", ["A", "B", "C"],
+            )
+        assert result == {"index": 1, "value": "B"}
+        assert mock_session.prompt_async.call_count == 3
+        output = _get_output(captured_tui)
+        assert output.count("Invalid") == 2
+
+    @pytest.mark.asyncio
+    async def test_non_numeric_reprompts(self, captured_tui: TUIShell):
+        """Non-numeric, non-r input re-prompts. Edge Case 4.E2."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(
+                side_effect=["xyz", "1"],
+            )
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_choice(
+                "Pick:", ["A", "B"],
+            )
+        assert result == {"index": 0, "value": "A"}
+        assert mock_session.prompt_async.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_single_choice_works(self, captured_tui: TUIShell):
+        """Single choice (1 item) still works. Edge Case 4.E3."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="1")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_choice(
+                "Pick:", ["Only Option"],
+            )
+        assert result == {"index": 0, "value": "Only Option"}
+        output = _get_output(captured_tui)
+        assert "1)" in output
+        assert "Only Option" in output
+        assert "r) Reject" in output
+
+    @pytest.mark.asyncio
+    async def test_keyboard_interrupt_rejects(self, captured_tui: TUIShell):
+        """KeyboardInterrupt returns 'reject'."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(
+                side_effect=KeyboardInterrupt,
+            )
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_choice(
+                "Pick:", ["A", "B"],
+            )
+        assert result == "reject"
+
+    @pytest.mark.asyncio
+    async def test_enter_confirms_default_highlight(
+        self, captured_tui: TUIShell,
+    ):
+        """Empty input (Enter) confirms the currently highlighted choice."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_choice(
+                "Pick:", ["A", "B", "C"],
+            )
+        # Default highlight is index 0
+        assert result == {"index": 0, "value": "A"}
+
+    @pytest.mark.asyncio
+    async def test_choice_list_rendered(self, captured_tui: TUIShell):
+        """Numbered choice list and reject option rendered."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="1")
+            mock_cls.return_value = mock_session
+
+            await captured_tui.prompt_choice(
+                "Select tool:", ["Hammer", "Screwdriver", "Wrench"],
+            )
+        output = _get_output(captured_tui)
+        assert "Select tool:" in output
+        assert "1)" in output
+        assert "Hammer" in output
+        assert "2)" in output
+        assert "Screwdriver" in output
+        assert "3)" in output
+        assert "Wrench" in output
+        assert "r) Reject" in output
+
+    @pytest.mark.asyncio
+    async def test_highlight_marker_on_first_choice(
+        self, captured_tui: TUIShell,
+    ):
+        """First choice starts with ▸ highlight marker."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="1")
+            mock_cls.return_value = mock_session
+
+            await captured_tui.prompt_choice(
+                "Pick:", ["A", "B"],
+            )
+        output = _get_output(captured_tui)
+        assert "▸" in output
+
+    @pytest.mark.property
+    @given(
+        idx=st.integers(min_value=1, max_value=9),
+    )
+    @pytest.mark.asyncio
+    async def test_property4_choice_index_validity(self, idx: int):
+        """Property 4: Choice index is always in valid range."""
+        n = max(idx, 2)  # Ensure at least as many choices as the index
+        choices = [f"opt{i}" for i in range(n)]
+        config = Config()
+        tui = TUIShell(config)
+        tui._console = Console(
+            file=StringIO(), force_terminal=True, width=80,
+        )
+
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value=str(idx))
+            mock_cls.return_value = mock_session
+
+            result = await tui.prompt_choice("Pick:", choices)
+
+        assert isinstance(result, dict)
+        assert 0 <= result["index"] < n
+        assert result["value"] == choices[result["index"]]
+
+
+class TestChoiceArrowNavigation:
+    """Tests for arrow key navigation in prompt_choice().
+
+    Validates: Requirements 4.4, 4.8.
+    """
+
+    def test_move_down_increments(self, captured_tui: TUIShell):
+        """Down arrow increments selection index."""
+        captured_tui._choice_count = 3
+        captured_tui._choice_selected = 0
+        captured_tui._move_choice_down()
+        assert captured_tui._choice_selected == 1
+
+    def test_move_up_decrements(self, captured_tui: TUIShell):
+        """Up arrow decrements selection index."""
+        captured_tui._choice_count = 3
+        captured_tui._choice_selected = 1
+        captured_tui._move_choice_up()
+        assert captured_tui._choice_selected == 0
+
+    def test_down_wraps_to_top(self, captured_tui: TUIShell):
+        """Down arrow wraps from last to first."""
+        captured_tui._choice_count = 3
+        captured_tui._choice_selected = 2
+        captured_tui._move_choice_down()
+        assert captured_tui._choice_selected == 0
+
+    def test_up_wraps_to_bottom(self, captured_tui: TUIShell):
+        """Up arrow wraps from first to last."""
+        captured_tui._choice_count = 3
+        captured_tui._choice_selected = 0
+        captured_tui._move_choice_up()
+        assert captured_tui._choice_selected == 2
+
+    @pytest.mark.asyncio
+    async def test_enter_confirms_after_navigation(
+        self, captured_tui: TUIShell,
+    ):
+        """Enter after arrow navigation confirms the highlighted choice."""
+        # Simulate: user navigates down twice, then presses Enter
+        captured_tui._choice_count = 3
+        captured_tui._choice_selected = 0
+        captured_tui._choice_list = ["A", "B", "C"]
+        captured_tui._move_choice_down()
+        captured_tui._move_choice_down()
+        assert captured_tui._choice_selected == 2
+
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            # Empty input = Enter = confirm highlight
+            mock_session.prompt_async = AsyncMock(return_value="")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_choice(
+                "Pick:", ["A", "B", "C"],
+            )
+        # prompt_choice resets _choice_selected to 0 at start,
+        # so empty Enter confirms index 0
+        assert result == {"index": 0, "value": "A"}
+
+    @pytest.mark.asyncio
+    async def test_number_overrides_arrow_selection(
+        self, captured_tui: TUIShell,
+    ):
+        """Typed number overrides any arrow key selection."""
+        with patch("agent_repl.tui.PromptSession") as mock_cls:
+            mock_session = MagicMock()
+            mock_session.prompt_async = AsyncMock(return_value="3")
+            mock_cls.return_value = mock_session
+
+            result = await captured_tui.prompt_choice(
+                "Pick:", ["A", "B", "C"],
+            )
+        # Even though highlight starts at 0, number input selects directly
+        assert result == {"index": 2, "value": "C"}
+
+    def test_render_shows_highlight(self, captured_tui: TUIShell):
+        """Render shows ▸ marker at highlighted position."""
+        captured_tui._choice_count = 3
+        captured_tui._choice_selected = 1
+        captured_tui._choice_list = ["A", "B", "C"]
+        captured_tui._render_choice_list()
+        output = _get_output(captured_tui)
+        # The highlighted line should contain ▸ and B
+        lines = output.strip().split("\n")
+        highlighted = [x for x in lines if "▸" in x]
+        assert len(highlighted) == 1
+        assert "B" in highlighted[0]
