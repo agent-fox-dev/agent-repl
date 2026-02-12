@@ -872,3 +872,26 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 8 (Checkpoint) then 9 (Integration Tests and Cleanup)
+
+---
+
+2026-02-12T19:30:00Z
+Specification: .specs/03_agent_input_requests
+Task: 8 (Checkpoint - Text Input Mode Complete)
+Branch: feature/checkpoint-text-input
+
+Completed:
+- Checkpoint verification for task group 7 (Text Input Mode)
+- All 521 tests pass, linter clean
+- Task group 7 subtasks 7.1–7.V confirmed complete in tasks.md
+- No questions or issues arising from implementation
+
+Documentation touched:
+- .specs/03_agent_input_requests/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 521 passed
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 9 (Integration Tests and End-to-End Validation)
