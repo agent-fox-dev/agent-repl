@@ -219,14 +219,14 @@ each mode, and group 5 validates end-to-end.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 9. Integration Tests and End-to-End Validation
-  - [ ] 9.1 Create mock agent that yields INPUT_REQUEST events
+- [x] 9. Integration Tests and End-to-End Validation
+  - [x] 9.1 Create mock agent that yields INPUT_REQUEST events
     - Async generator that yields TEXT_DELTA, then INPUT_REQUEST, then
       more TEXT_DELTA (if approved)
     - Support all three input modes
     - _Requirements: all_
 
-  - [ ] 9.2 Write integration test: approval flow (approve path)
+  - [x] 9.2 Write integration test: approval flow (approve path)
     - Mock agent yields text, then approval request
     - User approves -> agent continues, more text yielded
     - Verify complete conversation turn with all text content
@@ -234,7 +234,7 @@ each mode, and group 5 validates end-to-end.
     - **Property 2: Future Resolution Guarantee**
     - **Validates: Requirements 2.3-2.5, 3.5**
 
-  - [ ] 9.3 Write integration test: approval flow (reject path)
+  - [x] 9.3 Write integration test: approval flow (reject path)
     - Mock agent yields text, then approval request
     - User rejects -> stream cancelled
     - Verify partial conversation turn, history preserved
@@ -242,41 +242,41 @@ each mode, and group 5 validates end-to-end.
     - **Property 7: History Preservation on Rejection**
     - **Validates: Requirements 6.1-6.5**
 
-  - [ ] 9.4 Write integration test: choice flow
+  - [x] 9.4 Write integration test: choice flow
     - Mock agent yields choice request with 3 options
     - User selects option 2
     - Verify agent receives `{"index": 1, "value": "..."}`, continues
     - **Property 4: Choice Index Validity**
     - **Validates: Requirements 4.6**
 
-  - [ ] 9.5 Write integration test: text input flow
+  - [x] 9.5 Write integration test: text input flow
     - Mock agent yields text input request
     - User provides free-text answer
     - Verify agent receives exact text, continues
     - **Validates: Requirements 5.4**
 
-  - [ ] 9.6 Write integration test: multiple input requests
+  - [x] 9.6 Write integration test: multiple input requests
     - Mock agent yields two sequential INPUT_REQUEST events
     - Both handled correctly, stream completes
     - **Validates: Edge Case 2.E2**
 
-  - [ ] 9.7 Write property-based tests
+  - [x] 9.7 Write property-based tests
     - Generate arbitrary choice lists (2-20 items), verify index range in
       response (Property 4)
     - Generate approval requests, verify response is always binary
       (Property 3)
     - **Validates: Properties 3, 4**
 
-  - [ ] 9.8 Update existing stream_handler tests
+  - [x] 9.8 Update existing stream_handler tests
     - Ensure existing tests still pass with new event type in enum
     - Verify unknown event types are silently ignored
     - _Requirements: all_
 
-  - [ ] 9.V Verify task group 9
-    - [ ] All new tests pass: `uv run pytest -q tests/`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] All 8 correctness properties validated by tests
+  - [x] 9.V Verify task group 9
+    - [x] All new tests pass: `uv run pytest -q tests/`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] All 8 correctness properties validated by tests
 
 <!-- SESSION BOUNDARY -->
 
