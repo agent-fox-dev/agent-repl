@@ -179,7 +179,11 @@ class ClaudeAgentPlugin:
                     events.append(
                         StreamEvent(
                             type=StreamEventType.TOOL_USE_START,
-                            data={"name": block.name, "id": block.id},
+                            data={
+                                "name": block.name,
+                                "id": block.id,
+                                "input": getattr(block, "input", {}),
+                            },
                         )
                     )
 

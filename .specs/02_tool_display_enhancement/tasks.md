@@ -25,13 +25,13 @@ stored results for 3.
 
 ## Tasks
 
-- [ ] 1. Enhanced Tool Invocation Display
-  - [ ] 1.1 Include tool input in TOOL_USE_START event
+- [x] 1. Enhanced Tool Invocation Display
+  - [x] 1.1 Include tool input in TOOL_USE_START event
     - In `claude_agent.py:_translate_message()`, add `block.input` to the
       `TOOL_USE_START` event data dict (default to `{}` if attr missing)
     - _Requirements: 1.6_
 
-  - [ ] 1.2 Implement `_format_compact_summary()` helper
+  - [x] 1.2 Implement `_format_compact_summary()` helper
     - Add module-level function in `tui.py`
     - Input: `dict[str, Any]` -> Output: `str`
     - Format each key-value pair as `key: value`, separated by two spaces
@@ -41,18 +41,18 @@ stored results for 3.
     - Handle None values as empty string `""`
     - _Requirements: 1.2, 1.3, Edge Cases 1.1, 1.2, 1.3_
 
-  - [ ] 1.3 Add `show_tool_use()` method to `TUIShell`
+  - [x] 1.3 Add `show_tool_use()` method to `TUIShell`
     - Render "Using tool: {name}" in info_color
     - If input is non-empty, render compact summary on next line in dim style
     - _Requirements: 1.1, 1.4, 1.5_
 
-  - [ ] 1.4 Update `stream_handler.py` to use `show_tool_use()`
+  - [x] 1.4 Update `stream_handler.py` to use `show_tool_use()`
     - Change `TOOL_USE_START` handling to extract `input` from event data
     - Call `self._tui.show_tool_use(name, tool_input)` instead of
       `self._tui.show_info(f"Using tool: {name}")`
     - _Requirements: 1.1_
 
-  - [ ] 1.5 Write unit tests for `_format_compact_summary()`
+  - [x] 1.5 Write unit tests for `_format_compact_summary()`
     - Empty dict -> empty string
     - Single key -> "key: value"
     - Multiple keys -> "key1: val1  key2: val2"
@@ -63,18 +63,18 @@ stored results for 3.
     - **Property 3: Value Truncation Bound**
     - **Validates: Requirements 1.2, 1.3**
 
-  - [ ] 1.6 Write unit tests for `show_tool_use()`
+  - [x] 1.6 Write unit tests for `show_tool_use()`
     - Verify tool name line rendered
     - Verify compact summary line rendered for non-empty input
     - Verify no summary line for empty input
     - **Property 9: Empty Input Omission**
     - **Validates: Requirements 1.1, 1.4, 1.5**
 
-  - [ ] 1.V Verify task group 1
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "tool_use or compact_summary"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 1.1-1.6 acceptance criteria met
+  - [x] 1.V Verify task group 1
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "tool_use or compact_summary"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 1.1-1.6 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 1 is complete. Do NOT continue to task group 2 in this session. -->
 
