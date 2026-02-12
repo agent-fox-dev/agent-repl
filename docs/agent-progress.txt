@@ -415,3 +415,45 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 17 (Canonical Example + Integration Tests)
+
+---
+
+2026-02-12T12:00:00Z
+Specification: .specs/02_tool_display_enhancement
+Task: 1 (Enhanced Tool Invocation Display)
+Branch: feature/tool-invocation-display
+
+Completed:
+- 1.1 claude_agent.py: Added block.input to TOOL_USE_START event data dict
+  (uses getattr with {} default for safety)
+- 1.2 tui.py: Added _format_compact_summary() module-level function
+  - key: value pairs separated by two spaces
+  - Truncation at 60 chars with "..."
+  - JSON serialization for nested objects
+  - None values displayed as ""
+  - Newlines in string values escaped as \n
+- 1.3 tui.py: Added show_tool_use(name, tool_input) method to TUIShell
+  - Renders "Using tool: {name}" in info_color
+  - Renders compact summary in dim style (if input non-empty)
+- 1.4 stream_handler.py: Updated TOOL_USE_START handling
+  - Extracts input from event data, calls show_tool_use() instead of show_info()
+- 1.5 test_tui.py: 13 unit tests for _format_compact_summary()
+  - Empty dict, single key, multiple keys, long value truncation, None,
+    nested dict, integer, boolean, list values
+  - Property 2 (Compact Summary Completeness), Property 3 (Value Truncation Bound)
+- 1.6 test_tui.py: 4 unit tests for show_tool_use()
+  - Tool name rendered, compact summary rendered, no summary for empty input,
+    multiple input keys
+  - Property 9 (Empty Input Omission)
+- Updated test_stream_handler.py: show_tool_use mock + 2 updated tests
+- 1.V All verification checks passed
+
+Documentation touched:
+- .specs/02_tool_display_enhancement/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 428 passed (was 410, +18 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 2 (Checkpoint) then 3 (Dim Tool Output with Collapsible Results)

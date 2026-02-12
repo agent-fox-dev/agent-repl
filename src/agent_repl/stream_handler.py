@@ -51,7 +51,8 @@ class StreamHandler:
                         self._tui.stop_spinner()
                         first_content = False
                     name = event.data.get("name", "unknown")
-                    self._tui.show_info(f"Using tool: {name}")
+                    tool_input = event.data.get("input", {})
+                    self._tui.show_tool_use(name, tool_input)
 
                 elif event.type == StreamEventType.TOOL_RESULT:
                     name = event.data.get("name", "unknown")

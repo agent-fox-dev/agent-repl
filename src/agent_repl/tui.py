@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from typing import Any
 
@@ -14,6 +15,30 @@ from rich.text import Text
 from agent_repl.clipboard import copy_to_clipboard
 from agent_repl.exceptions import ClipboardError
 from agent_repl.types import Config
+
+_MAX_VALUE_LENGTH = 60
+
+
+def _format_compact_summary(tool_input: dict[str, Any]) -> str:
+    """Format tool input as compact key: value pairs, truncating long values."""
+    if not tool_input:
+        return ""
+
+    parts: list[str] = []
+    for key, value in tool_input.items():
+        if value is None:
+            rendered = '""'
+        elif isinstance(value, str):
+            rendered = value.replace("\n", "\\n")
+        else:
+            rendered = json.dumps(value)
+
+        if len(rendered) > _MAX_VALUE_LENGTH:
+            rendered = rendered[:_MAX_VALUE_LENGTH] + "..."
+
+        parts.append(f"{key}: {rendered}")
+
+    return "  ".join(parts)
 
 
 class TUIShell:
@@ -90,6 +115,15 @@ class TUIShell:
     def show_warning(self, text: str) -> None:
         """Render a warning message."""
         self._console.print(Text(text, style="yellow"))
+
+    def show_tool_use(self, name: str, tool_input: dict[str, Any]) -> None:
+        """Render tool invocation with name and compact input summary."""
+        self._console.print(
+            Text(f"Using tool: {name}", style=self._theme.info_color)
+        )
+        summary = _format_compact_summary(tool_input)
+        if summary:
+            self._console.print(Text(summary, style="dim"))
 
     def show_tool_result(self, name: str, result: str, is_error: bool) -> None:
         """Render a tool result in a labeled Rich Panel."""

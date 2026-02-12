@@ -35,6 +35,7 @@ def _make_tui_mock() -> MagicMock:
     tui.finalize_live_text = MagicMock()
     tui.show_info = MagicMock()
     tui.show_error = MagicMock()
+    tui.show_tool_use = MagicMock()
     tui.show_tool_result = MagicMock()
     tui.set_last_response = MagicMock()
     return tui
@@ -78,7 +79,22 @@ class TestToolUseStart:
     """Requirement 6.3: TOOL_USE_START → info display."""
 
     @pytest.mark.asyncio
-    async def test_tool_use_start_shows_info(self):
+    async def test_tool_use_start_shows_tool_use(self):
+        tui = _make_tui_mock()
+        session = Session()
+        handler = StreamHandler(tui, session)
+
+        events = [
+            StreamEvent(
+                type=StreamEventType.TOOL_USE_START,
+                data={"name": "search", "id": "t1", "input": {"query": "test"}},
+            ),
+        ]
+        await handler.handle_stream(_events_from_list(events))
+        tui.show_tool_use.assert_called_once_with("search", {"query": "test"})
+
+    @pytest.mark.asyncio
+    async def test_tool_use_start_defaults_empty_input(self):
         tui = _make_tui_mock()
         session = Session()
         handler = StreamHandler(tui, session)
@@ -90,8 +106,7 @@ class TestToolUseStart:
             ),
         ]
         await handler.handle_stream(_events_from_list(events))
-        tui.show_info.assert_called_once()
-        assert "search" in tui.show_info.call_args[0][0]
+        tui.show_tool_use.assert_called_once_with("search", {})
 
 
 class TestToolResult:
