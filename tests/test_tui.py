@@ -1,11 +1,12 @@
 """Tests for tui module.
 
-Covers Requirements 7.1-7.10, 7.E1, 7.E2, and Spec 02 Requirements 1.1-3.7.
+Covers Requirements 7.1-7.10, 7.E1, 7.E2, and Spec 02 Requirements 1.1-4.6.
 """
 
 from __future__ import annotations
 
 from io import StringIO
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -606,3 +607,134 @@ class TestCollapsedResultStorage:
         tui.show_tool_result("tool", result, False)
         assert len(tui._collapsed_results) == 1
         assert tui._collapsed_results[0] == result
+
+
+class TestExpandShortcut:
+    """Validates: Requirements 4.1-4.6. Property 8."""
+
+    def test_no_collapsed_results_shows_info(self, captured_tui: TUIShell):
+        """Req 4.5: Info message when no collapsed results."""
+        captured_tui.show_expanded_result()
+        # show_expanded_result does nothing when list is empty
+        # The Ctrl+O handler shows the info message instead
+        assert len(captured_tui._collapsed_results) == 0
+
+    def test_expand_single_result(self, captured_tui: TUIShell):
+        """Req 4.2: Expand shows full output in dim style."""
+        full_text = "line1\nline2\nline3\nline4\nline5"
+        captured_tui.show_tool_result("tool", full_text, False)
+        # Reset output to capture only the expand
+        captured_tui._console = Console(
+            file=StringIO(), force_terminal=True, width=200,
+        )
+        captured_tui.show_expanded_result()
+        output = _get_output(captured_tui)
+        assert "line1" in output
+        assert "line2" in output
+        assert "line3" in output
+        assert "line4" in output
+        assert "line5" in output
+
+    def test_expand_most_recent_only(self, captured_tui: TUIShell):
+        """Req 4.2, Edge 4.1: Multiple collapsed, expand most recent."""
+        r1 = "a\nb\nc\nd\ne"
+        r2 = "x\ny\nz\nw\nv"
+        captured_tui.show_tool_result("t1", r1, False)
+        captured_tui.show_tool_result("t2", r2, False)
+        # Reset output
+        captured_tui._console = Console(
+            file=StringIO(), force_terminal=True, width=200,
+        )
+        captured_tui.show_expanded_result()
+        output = _get_output(captured_tui)
+        # Should contain r2 content, not r1
+        assert "x" in output
+        assert "w" in output
+        assert "v" in output
+
+    def test_collapse_hint_references_shortcut(self, captured_tui: TUIShell):
+        """Req 4.6: Collapse hint includes Ctrl+O reference."""
+        captured_tui.show_tool_result(
+            "tool", "a\nb\nc\nd\ne", False,
+        )
+        output = _get_output(captured_tui)
+        assert "Ctrl+O to expand" in output
+
+    def test_ctrl_o_binding_registered(self, captured_tui: TUIShell):
+        """Req 4.3: Ctrl+O registered in KeyBindings."""
+        handler = _find_key_handler(captured_tui, "c-o")
+        assert handler is not None
+
+    def test_ctrl_o_no_action_during_live(self, captured_tui: TUIShell):
+        """Edge 4.2: No action during active streaming."""
+        full_text = "a\nb\nc\nd\ne"
+        captured_tui.show_tool_result("tool", full_text, False)
+        # Simulate active streaming
+        captured_tui._live_active = True
+        # Find and invoke the Ctrl+O handler
+        handler = _find_key_handler(captured_tui, "c-o")
+        assert handler is not None
+        # Reset console to check no output
+        captured_tui._console = Console(
+            file=StringIO(), force_terminal=True, width=200,
+        )
+        handler(MagicMock())
+        output = _get_output(captured_tui)
+        # Should produce no output during streaming
+        assert output.strip() == ""
+
+    def test_ctrl_o_no_action_during_spinner(self, captured_tui: TUIShell):
+        """Edge 4.2: No action during spinner active."""
+        full_text = "a\nb\nc\nd\ne"
+        captured_tui.show_tool_result("tool", full_text, False)
+        captured_tui._spinner_active = True
+        handler = _find_key_handler(captured_tui, "c-o")
+        assert handler is not None
+        captured_tui._console = Console(
+            file=StringIO(), force_terminal=True, width=200,
+        )
+        handler(MagicMock())
+        output = _get_output(captured_tui)
+        assert output.strip() == ""
+
+    def test_ctrl_o_empty_shows_info_message(self, captured_tui: TUIShell):
+        """Req 4.5: Ctrl+O with no results shows message."""
+        handler = _find_key_handler(captured_tui, "c-o")
+        assert handler is not None
+        handler(MagicMock())
+        output = _get_output(captured_tui)
+        assert "No collapsed output to expand" in output
+
+    @pytest.mark.property
+    @given(
+        count=st.integers(min_value=1, max_value=10),
+    )
+    def test_property8_expand_index_validity(self, count: int):
+        """Property 8: Expand always shows last element."""
+        config = Config()
+        tui = TUIShell(config)
+        tui._console = Console(
+            file=StringIO(), force_terminal=True, width=200,
+        )
+        for i in range(count):
+            result = "\n".join(
+                f"item{i}_line{j}" for j in range(5)
+            )
+            tui.show_tool_result(f"t{i}", result, False)
+        # Reset and expand
+        tui._console = Console(
+            file=StringIO(), force_terminal=True, width=200,
+        )
+        tui.show_expanded_result()
+        output = _get_output(tui)
+        # Should contain the last result's content
+        assert f"item{count - 1}_line0" in output
+        assert f"item{count - 1}_line4" in output
+
+
+def _find_key_handler(tui: TUIShell, key: str) -> Any:
+    """Find the handler function for a given key binding."""
+    for binding in tui._kb.bindings:
+        if any(getattr(k, "value", str(k)) == key for k in binding.keys):
+            return binding.handler
+    return None

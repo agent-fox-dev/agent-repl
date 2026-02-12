@@ -75,6 +75,20 @@ class TUIShell:
                     Text("No response to copy.", style=self._theme.info_color)
                 )
 
+        @self._kb.add("c-o")
+        def _expand_handler(event: Any) -> None:
+            if self._live_active or self._spinner_active:
+                return
+            if self._collapsed_results:
+                self.show_expanded_result()
+            else:
+                self._console.print(
+                    Text(
+                        "No collapsed output to expand.",
+                        style=self._theme.info_color,
+                    )
+                )
+
         self._prompt_session: PromptSession[str] = PromptSession(
             key_bindings=self._kb,
         )
@@ -154,9 +168,20 @@ class TUIShell:
             hidden = len(lines) - _COLLAPSE_THRESHOLD
             noun = "line" if hidden == 1 else "lines"
             self._console.print(
-                Text(f"▸ {hidden} more {noun}", style="dim"),
+                Text(
+                    f"▸ {hidden} more {noun} (Ctrl+O to expand)",
+                    style="dim",
+                ),
             )
             self._collapsed_results.append(result)
+
+    def show_expanded_result(self) -> None:
+        """Display full output of the most recently collapsed tool result."""
+        if self._collapsed_results:
+            self._console.print(
+                Text(self._collapsed_results[-1], style="dim"),
+                highlight=False,
+            )
 
     def clear_collapsed_results(self) -> None:
         """Clear stored collapsed tool results."""
