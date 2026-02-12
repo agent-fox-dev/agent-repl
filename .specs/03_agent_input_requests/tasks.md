@@ -118,7 +118,7 @@ each mode, and group 5 validates end-to-end.
 
 <!-- SESSION BOUNDARY: Task group 3 is complete. Do NOT continue to task group 4 in this session. -->
 
-- [ ] 4. Checkpoint - Approval Mode Complete
+- [x] 4. Checkpoint - Approval Mode Complete
   - Ensure all tests pass, ask the user if questions arise.
 
 <!-- SESSION BOUNDARY -->
