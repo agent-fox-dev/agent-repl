@@ -1215,3 +1215,50 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 9 (Integration Tests and Property Tests)
+
+---
+
+2026-02-13T00:30:00Z
+Specification: .specs/04_audit_trail
+Task: 9 (Integration Tests and Property Tests)
+Branch: feature/audit-integration-tests
+
+Completed:
+- 9.1 test_integration.py: TestAuditFullSession
+  - Full session: banner → input → agent → /version → /quit
+  - Reads audit file, verifies all entry types present in order
+  - Property 5: first=[SYSTEM] Audit started, last=[SYSTEM] Audit stopped
+  - Validates entry format regex on all lines
+- 9.2 test_integration.py: TestAuditToggleMidSession
+  - /audit on → input → /audit off
+  - Verifies file created, messages shown, contents correct
+- 9.3 test_integration.py: TestAuditCrashSurvival
+  - Start + log entries without stop()
+  - Verifies flushed entries readable (Property 3)
+- 9.4 test_audit_logger.py: Property-based tests
+  - TestPropertyTimestampOrdering: arbitrary n entries, monotonic (Property 1)
+  - TestPropertyInputClassification: slash → COMMAND, else → INPUT (Property 6)
+  - (Property 2 already covered by TestPropertyEntryFormatCompliance)
+- 9.5 Existing tests all pass (no changes needed)
+- 9.V All 8 correctness properties validated
+
+All 8 properties confirmed:
+1. Entry Timestamp Ordering → TestTimestampOrdering + TestPropertyTimestampOrdering
+2. Entry Format Compliance → TestPropertyEntryFormatCompliance
+3. Flush Per Entry → TestPropertyFlushPerEntry + TestAuditCrashSurvival
+4. No-Op When Inactive → TestPropertyNoOpWhenInactive
+5. Start/Stop Bookends → TestStartStopBookends + TestAuditFullSession
+6. Input Classification → TestPropertyInputClassification + TestREPLInputAudit
+7. File Creation on Start → TestFileCreationOnStart
+8. Graceful Failure → TestGracefulFailure
+
+Spec 04 (Audit Trail) is now COMPLETE.
+All 9 task groups finished. All requirements 1.1-6.6 implemented and tested.
+
+Documentation touched:
+- .specs/04_audit_trail/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 611 passed (was 606, +5 new)
+- uv run ruff check src/ tests/ → All checks passed
