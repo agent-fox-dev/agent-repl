@@ -480,3 +480,44 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 3 (Dim Tool Output with Collapsible Results)
+
+---
+
+2026-02-12T13:00:00Z
+Specification: .specs/02_tool_display_enhancement
+Task: 3 (Dim Tool Output with Collapsible Results)
+Branch: feature/dim-collapsible-output
+
+Completed:
+- 3.1 tui.py: Added _collapsed_results: list[str] = [] to TUIShell.__init__()
+- 3.2 tui.py: Replaced Panel rendering with dim text + collapsible output
+  - Header line: icon (✓/✗) + tool name in themed color
+  - Result body in dim style
+  - Non-error results >3 lines: first 3 lines + "▸ N more lines" hint
+  - Error results: always full output
+  - Empty results: header only
+  - Singular "line" when 1 hidden line
+  - Removed Panel import (no longer used)
+  - _COLLAPSE_THRESHOLD module-level constant
+- 3.3 tui.py: Added clear_collapsed_results() method
+  - claude_agent.py: Integrated with /clear command handler
+- 3.4 test_tui.py: 12 unit tests for dim tool output rendering
+  - Short result, single line, long result collapsed, error never collapsed,
+    empty result, exactly 3 lines, singular hint, no Panel (Property 4),
+    success/error header colors
+  - Property 5 (Collapse Threshold), Property 6 (Error Output Completeness)
+- 3.5 test_tui.py: 7 unit tests for collapsed result storage
+  - Stored on collapse, sequential growth, short not stored, error not stored,
+    clear resets, initially empty
+  - Property 7 (Collapsed Storage Integrity)
+- 3.V All verification checks passed
+
+Documentation touched:
+- .specs/02_tool_display_enhancement/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 447 passed (was 428, +19 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 4 (Checkpoint) then 5 (Ctrl+O Expand Shortcut)

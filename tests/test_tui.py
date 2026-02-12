@@ -1,6 +1,6 @@
 """Tests for tui module.
 
-Covers Requirements 7.1-7.10, 7.E1, 7.E2, and Spec 02 Requirements 1.1-1.6.
+Covers Requirements 7.1-7.10, 7.E1, 7.E2, and Spec 02 Requirements 1.1-3.7.
 """
 
 from __future__ import annotations
@@ -390,3 +390,219 @@ class TestShowToolUse:
             assert len(non_empty_lines) == 1
         else:
             assert len(non_empty_lines) == 2
+
+
+class TestDimToolOutput:
+    """Validates: Requirements 2.1-2.4, 3.1-3.5. Properties 4, 5, 6."""
+
+    def test_short_result_full_output(self, captured_tui: TUIShell):
+        """<=3 lines: full output in dim style, no collapse hint."""
+        captured_tui.show_tool_result("search", "line1\nline2\nline3", False)
+        output = _get_output(captured_tui)
+        assert "✓ search" in output
+        assert "line1" in output
+        assert "line2" in output
+        assert "line3" in output
+        assert "▸" not in output
+        assert "more line" not in output
+
+    def test_single_line_result(self, captured_tui: TUIShell):
+        captured_tui.show_tool_result("tool", "just one line", False)
+        output = _get_output(captured_tui)
+        assert "✓ tool" in output
+        assert "just one line" in output
+        assert "▸" not in output
+
+    def test_long_result_collapsed(self, captured_tui: TUIShell):
+        """>3 lines: show first 3 + collapse hint."""
+        lines = "\n".join(f"line{i}" for i in range(1, 8))
+        captured_tui.show_tool_result("search", lines, False)
+        output = _get_output(captured_tui)
+        assert "✓ search" in output
+        assert "line1" in output
+        assert "line2" in output
+        assert "line3" in output
+        assert "line4" not in output
+        assert "▸ 4 more lines" in output
+
+    def test_error_result_never_collapsed(self, captured_tui: TUIShell):
+        """Error results always show full output."""
+        lines = "\n".join(f"err{i}" for i in range(1, 8))
+        captured_tui.show_tool_result("exec", lines, True)
+        output = _get_output(captured_tui)
+        assert "✗ exec" in output
+        for i in range(1, 8):
+            assert f"err{i}" in output
+        assert "▸" not in output
+
+    def test_empty_result_header_only(self, captured_tui: TUIShell):
+        captured_tui.show_tool_result("search", "", False)
+        output = _get_output(captured_tui)
+        assert "✓ search" in output
+        non_empty = [x for x in output.strip().split("\n") if x.strip()]
+        assert len(non_empty) == 1
+
+    def test_exactly_3_lines_no_collapse(self, captured_tui: TUIShell):
+        """Exactly 3 lines: full output, no collapse."""
+        captured_tui.show_tool_result(
+            "tool", "a\nb\nc", False,
+        )
+        output = _get_output(captured_tui)
+        assert "a" in output
+        assert "b" in output
+        assert "c" in output
+        assert "▸" not in output
+
+    def test_singular_more_line(self, captured_tui: TUIShell):
+        """Edge case 3.3: 1 hidden line uses singular."""
+        captured_tui.show_tool_result(
+            "tool", "a\nb\nc\nd", False,
+        )
+        output = _get_output(captured_tui)
+        assert "▸ 1 more line" in output
+        assert "lines" not in output
+
+    def test_no_panel_used(self, captured_tui: TUIShell):
+        """Property 4: No Panel instantiation."""
+        import rich.panel
+
+        original_init = rich.panel.Panel.__init__
+        panel_created = False
+
+        def patched_init(self_panel, *args, **kwargs):
+            nonlocal panel_created
+            panel_created = True
+            original_init(self_panel, *args, **kwargs)
+
+        with patch.object(rich.panel.Panel, "__init__", patched_init):
+            captured_tui.show_tool_result("t", "result", False)
+
+        assert not panel_created
+
+    def test_success_header_uses_info_color(self, captured_tui: TUIShell):
+        """Req 2.2: Success icon with info_color."""
+        captured_tui.show_tool_result("search", "ok", False)
+        output = _get_output(captured_tui)
+        assert "✓ search" in output
+
+    def test_error_header_uses_error_color(self, captured_tui: TUIShell):
+        """Req 2.2: Error icon with error_color."""
+        captured_tui.show_tool_result("search", "fail", True)
+        output = _get_output(captured_tui)
+        assert "✗ search" in output
+
+    @pytest.mark.property
+    @given(
+        lines=st.lists(
+            st.text(
+                min_size=1, max_size=30,
+                alphabet=st.characters(
+                    whitelist_categories=("L", "N", "P", "S"),
+                ),
+            ),
+            min_size=5, max_size=20,
+        ),
+    )
+    def test_property5_collapse_threshold(self, lines: list[str]):
+        """Property 5: >3 lines → collapse hint present."""
+        result = "\n".join(lines)
+        config = Config()
+        tui = TUIShell(config)
+        tui._console = Console(
+            file=StringIO(), force_terminal=True, width=200,
+        )
+        tui.show_tool_result("tool", result, False)
+        output = _get_output(tui)
+        assert "▸" in output
+
+    @pytest.mark.property
+    @given(
+        lines=st.lists(
+            st.text(
+                min_size=1, max_size=30,
+                alphabet=st.characters(
+                    whitelist_categories=("L", "N", "P", "S"),
+                ),
+            ),
+            min_size=5, max_size=20,
+        ),
+    )
+    def test_property6_error_output_completeness(self, lines: list[str]):
+        """Property 6: Error results contain all lines."""
+        result = "\n".join(lines)
+        config = Config()
+        tui = TUIShell(config)
+        tui._console = Console(
+            file=StringIO(), force_terminal=True, width=200,
+        )
+        tui.show_tool_result("tool", result, True)
+        output = _get_output(tui)
+        assert "▸" not in output
+        for line in lines:
+            if line.strip():
+                assert line in output
+
+
+class TestCollapsedResultStorage:
+    """Validates: Requirements 3.6, 3.7. Property 7."""
+
+    def test_collapsed_result_stored(self, captured_tui: TUIShell):
+        """Full text stored when result is collapsed."""
+        result = "a\nb\nc\nd\ne"
+        captured_tui.show_tool_result("tool", result, False)
+        assert len(captured_tui._collapsed_results) == 1
+        assert captured_tui._collapsed_results[0] == result
+
+    def test_storage_grows_sequentially(self, captured_tui: TUIShell):
+        """Storage grows with each collapsed result."""
+        r1 = "1\n2\n3\n4"
+        r2 = "a\nb\nc\nd\ne"
+        captured_tui.show_tool_result("t1", r1, False)
+        captured_tui.show_tool_result("t2", r2, False)
+        assert len(captured_tui._collapsed_results) == 2
+        assert captured_tui._collapsed_results[0] == r1
+        assert captured_tui._collapsed_results[1] == r2
+
+    def test_short_result_not_stored(self, captured_tui: TUIShell):
+        """Results <=3 lines are not stored."""
+        captured_tui.show_tool_result("t", "a\nb\nc", False)
+        assert len(captured_tui._collapsed_results) == 0
+
+    def test_error_result_not_stored(self, captured_tui: TUIShell):
+        """Error results are never stored (always shown in full)."""
+        captured_tui.show_tool_result("t", "a\nb\nc\nd\ne", True)
+        assert len(captured_tui._collapsed_results) == 0
+
+    def test_clear_resets_storage(self, captured_tui: TUIShell):
+        """clear_collapsed_results() empties the list."""
+        captured_tui.show_tool_result("t", "a\nb\nc\nd", False)
+        assert len(captured_tui._collapsed_results) == 1
+        captured_tui.clear_collapsed_results()
+        assert len(captured_tui._collapsed_results) == 0
+
+    def test_initially_empty(self, captured_tui: TUIShell):
+        assert captured_tui._collapsed_results == []
+
+    @pytest.mark.property
+    @given(
+        lines=st.lists(
+            st.text(
+                min_size=1, max_size=50,
+                alphabet=st.characters(
+                    whitelist_categories=("L", "N", "P", "S"),
+                ),
+            ),
+            min_size=5, max_size=20,
+        ),
+    )
+    def test_property7_collapsed_storage_integrity(self, lines: list[str]):
+        """Property 7: Stored text is identical to original."""
+        result = "\n".join(lines)
+        config = Config()
+        tui = TUIShell(config)
+        tui._console = Console(
+            file=StringIO(), force_terminal=True, width=200,
+        )
+        tui.show_tool_result("tool", result, False)
+        assert len(tui._collapsed_results) == 1
+        assert tui._collapsed_results[0] == result

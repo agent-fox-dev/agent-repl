@@ -83,12 +83,12 @@ stored results for 3.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 3. Dim Tool Output with Collapsible Results
-  - [ ] 3.1 Add `_collapsed_results` state to `TUIShell.__init__()`
+- [x] 3. Dim Tool Output with Collapsible Results
+  - [x] 3.1 Add `_collapsed_results` state to `TUIShell.__init__()`
     - `self._collapsed_results: list[str] = []`
     - _Requirements: 3.6, 3.7_
 
-  - [ ] 3.2 Modify `show_tool_result()` to use dim text instead of Panel
+  - [x] 3.2 Modify `show_tool_result()` to use dim text instead of Panel
     - Remove `Panel` import usage for tool results
     - Render header line: icon + tool name in themed color
     - Render result body in dim style
@@ -99,11 +99,11 @@ stored results for 3.
     - Handle Rich markup in result text (escape or use highlight=False)
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-  - [ ] 3.3 Add `clear_collapsed_results()` method
+  - [x] 3.3 Add `clear_collapsed_results()` method
     - Called when session is cleared (integrate with `/clear` command)
     - _Requirements: 3.7_
 
-  - [ ] 3.4 Write unit tests for dim tool output rendering
+  - [x] 3.4 Write unit tests for dim tool output rendering
     - Short result (<=3 lines) -> full output in dim style, no hint
     - Long result (>3 lines) -> 3 lines + collapse hint
     - Error result (>3 lines) -> full output, no collapse
@@ -115,18 +115,18 @@ stored results for 3.
     - **Property 6: Error Output Completeness**
     - **Validates: Requirements 2.1-2.4, 3.1-3.5**
 
-  - [ ] 3.5 Write unit tests for collapsed result storage
+  - [x] 3.5 Write unit tests for collapsed result storage
     - Verify full text stored on collapse
     - Verify storage grows with each collapse
     - Verify clear resets storage
     - **Property 7: Collapsed Storage Integrity**
     - **Validates: Requirements 3.6, 3.7**
 
-  - [ ] 3.V Verify task group 3
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "tool_result or collapsed"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 2.1-2.4, 3.1-3.7 acceptance criteria met
+  - [x] 3.V Verify task group 3
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "tool_result or collapsed"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 2.1-2.4, 3.1-3.7 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 3 is complete. Do NOT continue to task group 4 in this session. -->
 
