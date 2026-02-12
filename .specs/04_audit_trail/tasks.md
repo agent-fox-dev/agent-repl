@@ -102,40 +102,40 @@ it can be wired, and wiring must complete before TUI/REPL integration.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 3. Config and App Wiring
-  - [ ] 3.1 Add `audit: bool = False` to `Config` dataclass
+- [x] 3. Config and App Wiring
+  - [x] 3.1 Add `audit: bool = False` to `Config` dataclass
     - Add field to `Config` in `types.py`
     - _Requirements: 1.1_
 
-  - [ ] 3.2 Add `audit_logger: Any = None` to `CommandContext`
+  - [x] 3.2 Add `audit_logger: Any = None` to `CommandContext`
     - Add field to `CommandContext` in `types.py`
     - _Requirements: (needed for /audit command handler access)_
 
-  - [ ] 3.3 Wire AuditLogger in `App.__init__()`
+  - [x] 3.3 Wire AuditLogger in `App.__init__()`
     - Create `self._audit_logger = AuditLogger()`
     - _Requirements: 1.2_
 
-  - [ ] 3.4 Wire AuditLogger in `App._setup()`
+  - [x] 3.4 Wire AuditLogger in `App._setup()`
     - Call `self._tui.set_audit_logger(self._audit_logger)`
     - If `self._config.audit` is True, call `self._audit_logger.start()`
       wrapped in try/except OSError
     - _Requirements: 1.2, Edge Cases 1.E1, 1.E2_
 
-  - [ ] 3.5 Wire AuditLogger in `App.run()`
+  - [x] 3.5 Wire AuditLogger in `App.run()`
     - Pass `self._audit_logger` to `REPL` constructor
     - After REPL exits, call `self._audit_logger.stop()` if active
     - _Requirements: 6.2, 6.3_
 
-  - [ ] 3.6 Update `REPL.__init__()` to accept `AuditLogger`
+  - [x] 3.6 Update `REPL.__init__()` to accept `AuditLogger`
     - Add optional `audit_logger` parameter
     - Store as `self._audit_logger`
     - _Requirements: 3.1_
 
-  - [ ] 3.7 Pass `audit_logger` through `CommandContext` in REPL
+  - [x] 3.7 Pass `audit_logger` through `CommandContext` in REPL
     - In `_handle_command()`, set `ctx.audit_logger = self._audit_logger`
     - _Requirements: (needed for /audit command)_
 
-  - [ ] 3.8 Write unit tests for Config and App wiring
+  - [x] 3.8 Write unit tests for Config and App wiring
     - `Config(audit=True)` field exists and defaults to False
     - `App._setup()` starts auditing when `config.audit=True`
     - `App._setup()` handles start failure gracefully
@@ -143,11 +143,11 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - REPL receives audit_logger
     - **Validates: Requirements 1.1, 1.2, 6.2, 6.3**
 
-  - [ ] 3.V Verify task group 3
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "audit"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 1.1-1.2, 6.2-6.3 acceptance criteria met
+  - [x] 3.V Verify task group 3
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "audit"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 1.1-1.2, 6.2-6.3 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 3 is complete. Do NOT continue to task group 4 in this session. -->
 

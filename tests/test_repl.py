@@ -394,3 +394,47 @@ class TestMultipleInputTypes:
         agent.send_message.assert_called_once()
         assert tui.show_error.call_count == 1  # unknown command
         assert "Unknown command: /unknown" in tui.show_error.call_args[0][0]
+
+
+class TestAuditLoggerWiring:
+    """Test REPL accepts and passes audit_logger."""
+
+    def test_repl_accepts_audit_logger(self):
+        tui = _make_tui()
+        audit = MagicMock()
+        repl = REPL(
+            session=Session(),
+            tui=tui,
+            command_registry=CommandRegistry(),
+            plugin_registry=PluginRegistry(),
+            config=Config(),
+            audit_logger=audit,
+        )
+        assert repl._audit_logger is audit
+
+    def test_repl_audit_logger_defaults_to_none(self):
+        tui = _make_tui()
+        repl = _make_repl(tui)
+        assert repl._audit_logger is None
+
+    @pytest.mark.asyncio
+    async def test_command_context_receives_audit_logger(self):
+        handler = AsyncMock()
+        reg = CommandRegistry()
+        reg.register(SlashCommand(name="test", description="T", handler=handler))
+
+        audit = MagicMock()
+        tui = _make_tui("/test")
+        repl = REPL(
+            session=Session(),
+            tui=tui,
+            command_registry=reg,
+            plugin_registry=PluginRegistry(),
+            config=Config(),
+            audit_logger=audit,
+        )
+        await repl.run()
+
+        handler.assert_called_once()
+        ctx = handler.call_args[0][0]
+        assert ctx.audit_logger is audit

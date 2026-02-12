@@ -1029,3 +1029,39 @@ Verification:
 - uv run ruff check src/ tests/ → All checks passed
 
 Next session: Task group 3 (Config and App Wiring)
+
+---
+
+2026-02-12T21:30:00Z
+Specification: .specs/04_audit_trail
+Task: 3 (Config and App Wiring)
+Branch: feature/config-app-wiring
+
+Completed:
+- 3.1 types.py: Added audit: bool = False to Config dataclass
+- 3.2 types.py: Added audit_logger: Any = None to CommandContext
+- 3.3 app.py: Created self._audit_logger = AuditLogger() in App.__init__()
+- 3.4 app.py: Wired audit logger in _setup()
+  - set_audit_logger() on TUI
+  - Conditional start when config.audit=True with OSError handling
+- 3.5 app.py: Wired in run()
+  - Passes audit_logger to REPL constructor
+  - Stops audit logger on REPL exit if active
+  - Also passes audit_logger in CLI CommandContext
+- 3.6 repl.py: Added optional audit_logger parameter to REPL.__init__()
+- 3.7 repl.py: Passes audit_logger through CommandContext in _handle_command()
+- 3.8 tui.py: Added set_audit_logger() method and _audit_logger instance var
+- Tests: 11 new tests
+  - test_types.py: Config.audit default, CommandContext.audit_logger default
+  - test_app.py: 8 tests (TestAuditWiring class)
+  - test_repl.py: 3 tests (TestAuditLoggerWiring class)
+
+Documentation touched:
+- .specs/04_audit_trail/tasks.md
+- docs/agent-progress.txt
+
+Verification:
+- uv run pytest tests/ -q → 575 passed (was 564, +11 new)
+- uv run ruff check src/ tests/ → All checks passed
+
+Next session: Task group 4 (Checkpoint) then 5 (TUI Output Audit Integration)
