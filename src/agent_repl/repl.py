@@ -52,6 +52,14 @@ class REPL:
             except (KeyboardInterrupt, EOFError):
                 break
 
+            # Audit log user input
+            stripped = raw.strip()
+            if stripped and self._audit_logger and self._audit_logger.active:
+                if stripped.startswith("/"):
+                    self._audit_logger.log("COMMAND", stripped)
+                else:
+                    self._audit_logger.log("INPUT", stripped)
+
             parsed = parse_input(raw)
             if parsed is None:
                 continue

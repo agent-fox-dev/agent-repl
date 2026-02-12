@@ -216,15 +216,15 @@ it can be wired, and wiring must complete before TUI/REPL integration.
 
 <!-- SESSION BOUNDARY -->
 
-- [ ] 7. REPL Input Audit and /audit Command
-  - [ ] 7.1 Add input audit logging to `REPL.run()`
+- [x] 7. REPL Input Audit and /audit Command
+  - [x] 7.1 Add input audit logging to `REPL.run()`
     - After `prompt_input()` and before `parse_input()`, log the raw input
     - If input starts with `/`: log with type `COMMAND`
     - Otherwise: log with type `INPUT`
     - Only log non-empty (stripped) input
     - _Requirements: 3.1, 3.2, 3.3, 3.4, Edge Case 3.E1_
 
-  - [ ] 7.2 Implement `_handle_audit()` command handler
+  - [x] 7.2 Implement `_handle_audit()` command handler
     - Add handler function in `builtin_commands.py`
     - Access `AuditLogger` via `ctx.audit_logger`
     - If `audit_logger` is None: show error
@@ -233,11 +233,11 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - Catch OSError from `start()` and show error
     - _Requirements: 2.2, 2.3, 2.4, 2.5, Edge Case 2.E1_
 
-  - [ ] 7.3 Register `/audit` in `BuiltinCommandsPlugin.get_commands()`
+  - [x] 7.3 Register `/audit` in `BuiltinCommandsPlugin.get_commands()`
     - Add SlashCommand with `name="audit"`, `cli_exposed=True`
     - _Requirements: 2.1, 2.6_
 
-  - [ ] 7.4 Write unit tests for REPL input auditing
+  - [x] 7.4 Write unit tests for REPL input auditing
     - Free text input logged as `INPUT`
     - Slash command logged as `COMMAND`
     - Empty input not logged
@@ -246,7 +246,7 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - **Property 6: Input Classification**
     - **Validates: Requirements 3.1-3.4, Edge Case 3.E1**
 
-  - [ ] 7.5 Write unit tests for `/audit` command
+  - [x] 7.5 Write unit tests for `/audit` command
     - Toggle on: calls start(), shows path
     - Toggle off: calls stop(), shows path
     - Start failure: shows error, stays off
@@ -254,11 +254,11 @@ it can be wired, and wiring must complete before TUI/REPL integration.
     - CLI-exposed flag is True
     - **Validates: Requirements 2.1-2.6, Edge Case 2.E1**
 
-  - [ ] 7.V Verify task group 7
-    - [ ] All new tests pass: `uv run pytest -q tests/ -k "audit"`
-    - [ ] All existing tests still pass: `uv run pytest tests/`
-    - [ ] No linter warnings introduced: `uv run ruff check src/ tests/`
-    - [ ] Requirements 2.1-2.6, 3.1-3.4 acceptance criteria met
+  - [x] 7.V Verify task group 7
+    - [x] All new tests pass: `uv run pytest -q tests/ -k "audit"`
+    - [x] All existing tests still pass: `uv run pytest tests/`
+    - [x] No linter warnings introduced: `uv run ruff check src/ tests/`
+    - [x] Requirements 2.1-2.6, 3.1-3.4 acceptance criteria met
 
 <!-- SESSION BOUNDARY: Task group 7 is complete. Do NOT continue to task group 8 in this session. -->
 
